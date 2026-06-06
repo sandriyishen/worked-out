@@ -22,6 +22,7 @@ web-build/
 *.orig.*
 
 # Secrets & keys
+.secrets/
 .env
 .env.local
 .env.*.local
