@@ -16,7 +16,7 @@ Every product decision should orbit this idea. If a feature makes the app feel l
 
 | Layer | Choice |
 |---|---|
-| Runtime | React Native (Expo SDK 52) |
+| Runtime | React Native 0.85 (Expo SDK 56) |
 | Navigation | Expo Router (file-based) |
 | Persistence | AsyncStorage (local-only, no account) |
 | Language | TypeScript (strict) |

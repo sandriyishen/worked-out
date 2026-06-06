@@ -43,7 +43,7 @@ The goal is to make movement the path of least resistance — something you do i
 
 ## Tech Stack
 
-- **React Native** via [Expo](https://expo.dev) SDK 52
+- **React Native** 0.85 via [Expo](https://expo.dev) SDK 56
 - **Expo Router** for file-based navigation
 - **AsyncStorage** for local persistence (no account, no cloud, no tracking)
 - **TypeScript** throughout
@@ -62,7 +62,7 @@ To build an installable APK:
 ```powershell
 # PowerShell
 $env:EXPO_TOKEN = "your-expo-access-token"
-npx eas-cli@20 build --platform android --profile preview
+npx eas-cli@latest build --platform android --profile preview
 ```
 
 `preview` produces an unsigned APK you can sideload directly. `production` produces a signed AAB for the Play Store. See [DEPENDENCIES.md](DEPENDENCIES.md) for account setup and full build instructions.

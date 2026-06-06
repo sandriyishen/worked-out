@@ -21,16 +21,16 @@ There are two ways to produce an APK. They share the same Node/npm prerequisites
 
 ## Prerequisites — both paths
 
-### Node.js 20 LTS
+### Node.js 22 LTS
 
-**Version:** 20.x (minimum 18.18; 20 recommended — this is what EAS Build servers run)
+**Version:** 22.x recommended (this is what EAS Build servers run for SDK 56). React Native 0.85 requires one of `20.19.4+`, `22.13.0+`, or `24.3.0+`, so Node 20 LTS still works if it's a recent patch.
 
 Install via the Windows installer from https://nodejs.org, or use a version manager (see Isolation below). npm is bundled with Node — no separate install needed.
 
 Verify:
 ```
-node --version   # should print v20.x.x
-npm --version    # should print 10.x.x
+node --version   # should print v22.x.x (or v20.19.4+ / v24.3.0+)
+npm --version    # should print 10.x.x or newer
 ```
 
 A `.nvmrc` file at the root of this repo pins the version for tools that respect it.
@@ -70,16 +70,16 @@ The token looks like `expo_xxxxxxxxxxxxxxxxxxxxxx`. Expo only shows it once — 
 **PowerShell:**
 ```powershell
 $env:EXPO_TOKEN = "paste-your-token-here"
-npx eas-cli@20 build --platform android --profile preview
+npx eas-cli@latest build --platform android --profile preview
 ```
 
 **Git Bash / WSL:**
 ```bash
 export EXPO_TOKEN="paste-your-token-here"
-npx eas-cli@20 build --platform android --profile preview
+npx eas-cli@latest build --platform android --profile preview
 ```
 
-`npx eas-cli@20` downloads EAS CLI on demand — no global install needed. When the build finishes the terminal prints a download URL for the `.apk`.
+`npx eas-cli@latest` downloads EAS CLI on demand — no global install needed. When the build finishes the terminal prints a download URL for the `.apk`.
 
 **Profiles:**
 ```
@@ -102,7 +102,7 @@ npm install
 
 ### 2. Java Development Kit 17
 
-**Exact version:** JDK 17 (not 11, not 21 — RN 0.76 requires 17).
+**Exact version:** JDK 17 (React Native 0.85 builds on JDK 17).
 
 Options:
 - Microsoft Build of OpenJDK 17: https://www.microsoft.com/openjdk (recommended on Windows)
@@ -115,24 +115,18 @@ Set `JAVA_HOME` to the JDK root if the installer doesn't do it automatically.
 
 ### 3. Android SDK
 
-**Minimum required components:**
-
-| Component | Version |
-|---|---|
-| Android SDK Platform | API 34 |
-| Android Build Tools | 34.0.0 |
-| Android NDK | 26.1.10909125 |
-| Android SDK Command-Line Tools | latest |
-| Android Emulator | optional (for running in emulator) |
+The exact compile/target API level, Build Tools, and NDK are pinned by the Expo SDK 56 prebuild template, not chosen by hand. Run `npx expo prebuild --platform android` once and read the generated `android/build.gradle` (the `compileSdkVersion`, `buildToolsVersion`, `targetSdkVersion`, and `ndkVersion` values at the top) — those are the versions to install. `npx expo-doctor` will also flag anything missing.
 
 **How to install:**
 
-Option 1 — Android Studio (easiest): Download from https://developer.android.com/studio. The installer handles SDK, Build Tools, and NDK automatically via the SDK Manager.
+Option 1 — Android Studio (easiest): Download from https://developer.android.com/studio. The installer handles the SDK Platform, Build Tools, and NDK automatically via the SDK Manager — point it at the versions from `android/build.gradle`.
 
-Option 2 — Command-line tools only (no IDE): Download the SDK Command-Line Tools from the same page, then use `sdkmanager`:
+Option 2 — Command-line tools only (no IDE): Download the SDK Command-Line Tools from the same page, then feed the versions from `android/build.gradle` to `sdkmanager`, e.g.:
 ```
-sdkmanager "platforms;android-34" "build-tools;34.0.0" "ndk;26.1.10909125"
+sdkmanager "platforms;android-<compileSdk>" "build-tools;<buildToolsVersion>" "ndk;<ndkVersion>"
 ```
+
+> Path A (EAS Cloud Build) sidesteps all of this — the build image already has the correct SDK, Build Tools, and NDK for SDK 56 preinstalled.
 
 ### 4. Environment variables
 
@@ -175,7 +169,7 @@ Output APK path: `android/app/build/outputs/apk/release/app-release.apk`
 [ ] Set token in your shell:
       PowerShell:  $env:EXPO_TOKEN = "your-token"
       bash/zsh:    export EXPO_TOKEN="your-token"
-[ ] npx eas-cli@20 build --platform android --profile preview
+[ ] npx eas-cli@latest build --platform android --profile preview
 [ ] Download the APK from the URL printed when the build finishes
 ```
 
@@ -207,26 +201,26 @@ If you want to avoid polluting your global system with Node, JDK, and Android SD
 
 ### Option 1 — EAS Build (already isolates the Android side)
 
-The cloud build runs on a pinned Ubuntu 22.04 image with JDK 17 and NDK 26.1.10909125 pre-installed. You still install Node locally, but you can pair it with a Node version manager (below) to keep that isolated too.
+The cloud build runs on a pinned Linux image with the JDK and NDK that SDK 56 expects pre-installed. You still install Node locally, but you can pair it with a Node version manager (below) to keep that isolated too.
 
 ---
 
 ### Option 2 — Node version manager (partial isolation, local Node only)
 
-Manages multiple Node versions side-by-side so this project's Node 20 doesn't affect other projects.
+Manages multiple Node versions side-by-side so this project's Node 22 doesn't affect other projects.
 
 **On Windows:**
 
 - **nvm-windows**: https://github.com/coreybutler/nvm-windows
   ```
-  nvm install 20
-  nvm use 20
+  nvm install 22
+  nvm use 22
   ```
   The `.nvmrc` file in this repo pins the version — `nvm use` with no argument reads it.
 
 - **Volta**: https://volta.sh — sets per-project Node and npm versions automatically when you `cd` into the directory. No manual `use` command needed.
   ```
-  volta install node@20
+  volta install node@22
   ```
 
 ---
@@ -243,7 +237,7 @@ A Dev Container runs the entire development environment inside Docker — Node, 
 
 Open the repo in VS Code. If a `.devcontainer/` folder is present, VS Code will offer to reopen in the container. Everything inside the container is isolated and disposable — delete the container and nothing is left on your system.
 
-A `.devcontainer/` configuration is not included in this repo yet, but can be added. The recommended base image for React Native Android is `mcr.microsoft.com/devcontainers/android` or a custom image built on `node:20` + `eclipse-temurin:17` + Android Command-Line Tools.
+A `.devcontainer/` configuration is not included in this repo yet, but can be added. The recommended base image for React Native Android is `mcr.microsoft.com/devcontainers/android` or a custom image built on `node:22` + `eclipse-temurin:17` + Android Command-Line Tools.
 
 > **Note:** Running an Android emulator inside Docker on Windows requires hardware virtualisation passthrough, which is not well supported. Dev Containers work best for EAS cloud builds (Path A), where the container only needs Node and EAS CLI, not the full Android SDK.
 
@@ -259,13 +253,11 @@ A Codespace is a Dev Container hosted by GitHub — nothing installed on your ma
 
 | Tool | Required for | Version | Install |
 |---|---|---|---|
-| Node.js | Both paths | 20 LTS | nodejs.org or nvm-windows |
+| Node.js | Both paths | 22 LTS (20.19.4+ / 24.3.0+ also OK) | nodejs.org or nvm-windows |
 | npm | Both paths | bundled with Node | — |
-| EAS CLI | Path A | 20.x | `npx eas-cli@20` (no install needed) |
+| EAS CLI | Path A | latest | `npx eas-cli@latest` (no install needed) |
 | Expo account + token | Path A | — | expo.dev → Account Settings → Access Tokens |
 | JDK | Path B | 17 | adoptium.net or Android Studio |
-| Android SDK Platform | Path B | API 34 | Android Studio / sdkmanager |
-| Android Build Tools | Path B | 34.0.0 | Android Studio / sdkmanager |
-| Android NDK | Path B | 26.1.10909125 | Android Studio / sdkmanager |
+| Android SDK / Build Tools / NDK | Path B | per `android/build.gradle` (set by SDK 56 prebuild) | Android Studio / sdkmanager |
 | Android Studio | Path B | optional | developer.android.com/studio |
 | Docker Desktop | Option 3 isolation | any | docker.com |
