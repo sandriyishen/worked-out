@@ -135,6 +135,17 @@ The `exerciseLibrary.ts` file exports helper functions (`getExercisesByCategory`
 
 ---
 
+## Issue Labeling
+
+When creating GitHub issues, always apply these labels:
+
+- **`planned`** — any issue surfaced or requested by the project owner. If the user raised it, it gets `planned`.
+- **`feature`** — any issue that pertains to expanding app functionality (new screens, new capabilities, new user-facing behavior).
+
+These are not mutually exclusive: an owner-requested feature gets both `planned` and `feature`. Issues you surface yourself (e.g. tech-debt or follow-ups) take neither by default — label those by severity instead.
+
+---
+
 ## Running Locally
 
 ```bash
