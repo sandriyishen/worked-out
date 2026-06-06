@@ -50,25 +50,42 @@ Expo's build service compiles the APK in a managed Linux container. You only nee
 npm install
 ```
 
-### 2. Install EAS CLI globally
-```
-npm install -g eas-cli
-```
-Current version in use: **14.x** (check with `eas --version`; any 14.x works).
+### 2. Create a free Expo account and get an access token
 
-### 3. Create a free Expo account
-Sign up at https://expo.dev. Log in with:
-```
-eas login
+Sign up or log in at https://expo.dev, then:
+
+1. Click your avatar (top-right) → **Account Settings**
+2. Click **Access Tokens** in the left sidebar
+3. Click **Create Token**, give it a name (e.g. `worked-out-build`), copy the value
+
+The token is a long string that looks like `expo_xxxxxxxxxxxxxxxxxxxxxx`. Store it somewhere safe — Expo only shows it once.
+
+**Why a token instead of `eas login`?**
+`eas login` is an interactive browser-redirect flow that breaks in many Windows terminal emulators (Git Bash, some PowerShell configurations). The token is a plain environment variable — it works everywhere, requires nothing interactive, and can be set in CI/CD without any human in the loop.
+
+### 3. Set the token and build
+
+**PowerShell:**
+```powershell
+$env:EXPO_TOKEN = "paste-your-token-here"
+npx eas-cli@20 build --platform android --profile preview
 ```
 
-### 4. Build
-```
-eas build --platform android --profile preview   # unsigned APK for sideloading
-eas build --platform android --profile production # signed AAB for Play Store
+**Git Bash / WSL:**
+```bash
+export EXPO_TOKEN="paste-your-token-here"
+npx eas-cli@20 build --platform android --profile preview
 ```
 
-EAS downloads the finished APK/AAB URL when done. No Java, no Android SDK, no Gradle needed locally.
+`npx eas-cli@20` downloads and runs EAS CLI on demand — no global install needed. The build runs on Expo's servers; when it finishes, the terminal prints a download URL for the `.apk`.
+
+**Profiles:**
+```
+--profile preview     → unsigned APK  (sideload to device, no Play Store)
+--profile production  → signed AAB    (Play Store submission)
+```
+
+No Java, no Android SDK, no Gradle needed locally.
 
 ---
 
@@ -149,12 +166,15 @@ Output APK path: `android/app/build/outputs/apk/release/app-release.apk`
 ## Quick-start checklist (Path A — recommended)
 
 ```
-[ ] Install Node.js 20 LTS
+[ ] Install Node.js (any LTS — winget install OpenJS.NodeJS.LTS)
 [ ] Clone repo
 [ ] npm install
-[ ] npm install -g eas-cli
-[ ] eas login
-[ ] eas build --platform android --profile preview
+[ ] Create free account at expo.dev
+[ ] expo.dev → Account Settings → Access Tokens → Create Token → copy it
+[ ] $env:EXPO_TOKEN = "your-token"   (PowerShell)
+    export EXPO_TOKEN="your-token"   (bash)
+[ ] npx eas-cli@20 build --platform android --profile preview
+[ ] Download APK from the URL printed when build finishes
 ```
 
 ---
@@ -221,8 +241,8 @@ A Codespace is a Dev Container hosted by GitHub — nothing installed on your ma
 |---|---|---|---|
 | Node.js | Both paths | 20 LTS | nodejs.org or nvm-windows |
 | npm | Both paths | bundled with Node | — |
-| EAS CLI | Path A | 14.x | `npm i -g eas-cli` |
-| Expo account | Path A | — | expo.dev |
+| EAS CLI | Path A | 20.x | `npx eas-cli@20` (no install needed) |
+| Expo account + token | Path A | — | expo.dev → Account Settings → Access Tokens |
 | JDK | Path B | 17 | adoptium.net or Android Studio |
 | Android SDK Platform | Path B | API 34 | Android Studio / sdkmanager |
 | Android Build Tools | Path B | 34.0.0 | Android Studio / sdkmanager |
