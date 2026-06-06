@@ -20,17 +20,16 @@
       "softwareKeyboardLayoutMode": "pan"
     },
     "plugins": [
-      "expo-router",
-      [
-        "@react-native-async-storage/async-storage",
-        {
-          "StorageSize": 10
-        }
-      ]
+      "expo-router"
     ],
     "scheme": "worked-out",
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b4fb8e3f-3a55-4c96-9ab3-c8fc8d91a3d0"
+      }
     }
   }
 }
