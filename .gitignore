@@ -45,7 +45,6 @@ ios/
 
 # EAS
 .eas/
-eas.json
 
 # TypeScript
 *.tsbuildinfo
