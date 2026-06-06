@@ -54,13 +54,18 @@ The goal is to make movement the path of least resistance — something you do i
 
 ```bash
 npm install
-npx expo start --android
+npx expo start --android   # development: opens in Expo Go or emulator
 ```
 
-For a production APK:
-```bash
-npx eas build --platform android --profile production
+To build an installable APK:
+
+```powershell
+# PowerShell
+$env:EXPO_TOKEN = "your-expo-access-token"
+npx eas-cli@20 build --platform android --profile preview
 ```
+
+`preview` produces an unsigned APK you can sideload directly. `production` produces a signed AAB for the Play Store. See [DEPENDENCIES.md](DEPENDENCIES.md) for account setup and full build instructions.
 
 ---
 

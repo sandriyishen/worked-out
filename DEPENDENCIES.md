@@ -45,6 +45,8 @@ Already required to clone the repo. Verify with `git --version`.
 
 Expo's build service compiles the APK in a managed Linux container. You only need local tooling to submit the code.
 
+The project is already linked to an EAS project (`extra.eas.projectId` in `app.json`). You do not need to run `eas init` or create a new project — just an Expo account and a token.
+
 ### 1. Install project dependencies
 ```
 npm install
@@ -58,10 +60,10 @@ Sign up or log in at https://expo.dev, then:
 2. Click **Access Tokens** in the left sidebar
 3. Click **Create Token**, give it a name (e.g. `worked-out-build`), copy the value
 
-The token is a long string that looks like `expo_xxxxxxxxxxxxxxxxxxxxxx`. Store it somewhere safe — Expo only shows it once.
+The token looks like `expo_xxxxxxxxxxxxxxxxxxxxxx`. Expo only shows it once — save it somewhere safe.
 
 **Why a token instead of `eas login`?**
-`eas login` is an interactive browser-redirect flow that breaks in many Windows terminal emulators (Git Bash, some PowerShell configurations). The token is a plain environment variable — it works everywhere, requires nothing interactive, and can be set in CI/CD without any human in the loop.
+`eas login` opens an interactive browser flow that breaks in many Windows terminals (Git Bash, some PowerShell configurations). The environment variable approach works everywhere and is CI-friendly.
 
 ### 3. Set the token and build
 
@@ -77,7 +79,7 @@ export EXPO_TOKEN="paste-your-token-here"
 npx eas-cli@20 build --platform android --profile preview
 ```
 
-`npx eas-cli@20` downloads and runs EAS CLI on demand — no global install needed. The build runs on Expo's servers; when it finishes, the terminal prints a download URL for the `.apk`.
+`npx eas-cli@20` downloads EAS CLI on demand — no global install needed. When the build finishes the terminal prints a download URL for the `.apk`.
 
 **Profiles:**
 ```
@@ -166,16 +168,34 @@ Output APK path: `android/app/build/outputs/apk/release/app-release.apk`
 ## Quick-start checklist (Path A — recommended)
 
 ```
-[ ] Install Node.js (any LTS — winget install OpenJS.NodeJS.LTS)
-[ ] Clone repo
-[ ] npm install
-[ ] Create free account at expo.dev
+[ ] Install Node.js LTS  →  winget install OpenJS.NodeJS.LTS
+[ ] Clone repo and run:  npm install
+[ ] Create a free account at expo.dev
 [ ] expo.dev → Account Settings → Access Tokens → Create Token → copy it
-[ ] $env:EXPO_TOKEN = "your-token"   (PowerShell)
-    export EXPO_TOKEN="your-token"   (bash)
+[ ] Set token in your shell:
+      PowerShell:  $env:EXPO_TOKEN = "your-token"
+      bash/zsh:    export EXPO_TOKEN="your-token"
 [ ] npx eas-cli@20 build --platform android --profile preview
-[ ] Download APK from the URL printed when build finishes
+[ ] Download the APK from the URL printed when the build finishes
 ```
+
+> The EAS project ID is already committed in `app.json` — no `eas init` or project creation step required.
+
+---
+
+## Adding native dependencies during development
+
+Always use `npx expo install <package>` — **not** `npm install` — when adding any native module (one that has an `android/` or `ios/` folder in its package). Expo's install command selects the version that is verified compatible with the current SDK, and automatically adds the package as a config plugin in `app.json` if needed.
+
+```bash
+# correct
+npx expo install expo-camera
+
+# wrong — may install an incompatible version that breaks the Gradle build
+npm install expo-camera
+```
+
+`npm install` remains the right tool for pure JS packages and dev tools (TypeScript, Babel, etc.).
 
 ---
 
