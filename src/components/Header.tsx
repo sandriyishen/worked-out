@@ -21,7 +21,7 @@ export function Header({ session, showSettings, onToggleSettings }: Props) {
           </Text>
         </View>
         <TouchableOpacity onPress={onToggleSettings} style={[styles.settingsBtn, showSettings && styles.settingsBtnActive]}>
-          <Text style={styles.settingsBtnText}>⚙ Settings</Text>
+          <Text style={styles.settingsBtnText}>⚙</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -62,8 +62,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    padding: 8,
   },
   settingsBtnActive: {
     backgroundColor: 'rgba(255,255,255,0.12)',
