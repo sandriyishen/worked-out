@@ -1,5 +1,5 @@
-import { Exercise, ExerciseCategory, BodyArea, Equipment } from '../types';
-import { SESSIONS } from './sessions';
+import { Exercise, ExerciseCategory, BodyArea, Equipment, WorkoutSession } from '../types';
+import { PREP_SECS, SESSIONS } from './sessions';
 
 /**
  * The exercise library is the single source of truth for all exercises.
@@ -26,6 +26,55 @@ export function getExercisesByEquipment(equipment: Equipment): Exercise[] {
 
 export function getExercisesWithNoEquipment(): Exercise[] {
   return getExercisesByEquipment('none');
+}
+
+/** Time a single exercise occupies in a session, including its prep window. */
+const exerciseCost = (e: Exercise) => e.duration + PREP_SECS;
+
+/**
+ * Adjusts a session's exercise list to fit a per-session time budget (feature #1).
+ *
+ * - No budget (undefined/0) → returns the session unchanged ("Auto").
+ * - Budget shorter than the session → trims exercises in their curated order,
+ *   keeping at least one so there's always something to do.
+ * - Budget longer than the session → keeps the whole session, then appends
+ *   category-matched exercises from the library to fill the remaining time.
+ *
+ * Cost per exercise mirrors WorkoutTab's `duration + PREP_SECS` total, so the
+ * resulting list fills (without exceeding) the budget as closely as possible.
+ */
+export function fitSessionToBudget(
+  session: WorkoutSession,
+  budgetMinutes?: number,
+): Exercise[] {
+  if (!budgetMinutes) return session.exercises; // Auto / off → unchanged
+  const budgetSecs = budgetMinutes * 60;
+
+  // Trim: take session exercises in curated order while they fit; always keep ≥1.
+  const picked: Exercise[] = [];
+  let used = 0;
+  for (const e of session.exercises) {
+    if (used + exerciseCost(e) > budgetSecs && picked.length > 0) break;
+    picked.push(e);
+    used += exerciseCost(e);
+  }
+
+  // Extend: budget exceeds the session pool → pull matching exercises from the library.
+  if (used < budgetSecs && picked.length === session.exercises.length) {
+    const sessionCats = new Set(session.exercises.flatMap(e => e.categories));
+    const haveIds = new Set(picked.map(e => e.id));
+    const candidates = EXERCISE_LIBRARY.filter(
+      e => !haveIds.has(e.id) && e.categories.some(c => sessionCats.has(c)),
+    );
+    for (const e of candidates) {
+      if (used + exerciseCost(e) > budgetSecs) continue; // skip ones that don't fit; keep filling
+      picked.push(e);
+      used += exerciseCost(e);
+      haveIds.add(e.id);
+    }
+  }
+
+  return picked;
 }
 
 /**

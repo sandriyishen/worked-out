@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { WorkoutSession } from '../types';
+import { Exercise, WorkoutSession } from '../types';
 import { WorkoutTimerAPI } from '../hooks/useWorkoutTimer';
 import { Colors, Fonts } from '../theme';
 import { ExerciseList } from './ExerciseList';
@@ -8,6 +8,7 @@ import { PREP_SECS } from '../data/sessions';
 
 interface Props {
   session: WorkoutSession;
+  exercises?: Exercise[];
   timer: WorkoutTimerAPI;
   isDayOff: boolean;
   completedSessionIds: Set<number>;
@@ -19,6 +20,7 @@ interface Props {
 
 export function WorkoutTab({
   session,
+  exercises = session.exercises,
   timer,
   isDayOff,
   completedSessionIds,
@@ -29,7 +31,7 @@ export function WorkoutTab({
 }: Props) {
   const { phase, exIdx, timer: t, paused, showSwitch, exercise, start, reset, togglePause } = timer;
 
-  const totalSecs = session.exercises.reduce((a, e) => a + e.duration + PREP_SECS, 0);
+  const totalSecs = exercises.reduce((a, e) => a + e.duration + PREP_SECS, 0);
   const totalMin = Math.floor(totalSecs / 60);
   const totalSecRem = totalSecs % 60;
   const sessionsDone = completedSessionIds.size;
@@ -100,7 +102,7 @@ export function WorkoutTab({
                 {exercise.type === 'work' ? 'WORK' : 'STRETCH'}
               </Text>
             </View>
-            <Text style={styles.exerciseCounter}>{exIdx + 1}/{session.exercises.length}</Text>
+            <Text style={styles.exerciseCounter}>{exIdx + 1}/{exercises.length}</Text>
           </View>
 
           <Text style={styles.activeName}>{exercise.name}</Text>
@@ -169,7 +171,7 @@ export function WorkoutTab({
 
       {/* Exercise list */}
       <ExerciseList
-        exercises={session.exercises}
+        exercises={exercises}
         phase={phase}
         exIdx={exIdx}
         sessionColor={session.color}
