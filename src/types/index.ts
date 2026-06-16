@@ -73,6 +73,7 @@ export interface CalendarData {
 
 export interface AppSettings {
   dailyTarget: number;
+  sessionDurationMinutes?: number; // undefined = Auto (full session, current behavior)
 }
 
 export interface PersistedState {

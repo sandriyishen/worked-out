@@ -4,14 +4,16 @@ import { Colors, Fonts } from '../theme';
 
 interface Props {
   dailyTarget: number;
+  sessionDurationMinutes?: number;
   isDayOff: boolean;
   sessionColor: string;
   onUpdateTarget: (val: number) => void;
+  onUpdateDuration: (val?: number) => void;
   onMarkTodayOff: () => void;
   onUnmarkTodayOff: () => void;
 }
 
-export function SettingsPanel({ dailyTarget, isDayOff, sessionColor, onUpdateTarget, onMarkTodayOff, onUnmarkTodayOff }: Props) {
+export function SettingsPanel({ dailyTarget, sessionDurationMinutes, isDayOff, sessionColor, onUpdateTarget, onUpdateDuration, onMarkTodayOff, onUnmarkTodayOff }: Props) {
   return (
     <View style={styles.container}>
       <Text style={styles.label}>DAILY TARGET</Text>
@@ -27,6 +29,31 @@ export function SettingsPanel({ dailyTarget, isDayOff, sessionColor, onUpdateTar
           <Text style={styles.stepperText}>+</Text>
         </TouchableOpacity>
         <Text style={styles.hint}>Day marked ✓{'\n'}when you hit target</Text>
+      </View>
+      <View style={styles.divider} />
+      <Text style={styles.label}>SESSION DURATION</Text>
+      <View style={styles.targetRow}>
+        <TouchableOpacity
+          onPress={() => onUpdateDuration(sessionDurationMinutes == null || sessionDurationMinutes <= 1 ? undefined : sessionDurationMinutes - 1)}
+          style={styles.stepper}
+        >
+          <Text style={styles.stepperText}>−</Text>
+        </TouchableOpacity>
+        <View style={styles.targetDisplay}>
+          <Text style={[styles.targetValue, { color: sessionColor }]}>
+            {sessionDurationMinutes == null ? 'Auto' : sessionDurationMinutes}
+          </Text>
+          <Text style={styles.targetUnit}>
+            {sessionDurationMinutes == null ? 'full session' : 'min/session'}
+          </Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => onUpdateDuration((sessionDurationMinutes ?? 0) + 1)}
+          style={styles.stepper}
+        >
+          <Text style={styles.stepperText}>+</Text>
+        </TouchableOpacity>
+        <Text style={styles.hint}>Trims or fills{'\n'}to fit your time</Text>
       </View>
       <View style={styles.divider} />
       {!isDayOff ? (

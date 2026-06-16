@@ -1,8 +1,9 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SESSIONS } from '../src/data/sessions';
+import { fitSessionToBudget } from '../src/data/exerciseLibrary';
 import { useWorkoutTimer } from '../src/hooks/useWorkoutTimer';
 import { useWorkoutHistory } from '../src/hooks/useWorkoutHistory';
 import { Header } from '../src/components/Header';
@@ -24,6 +25,7 @@ export default function HomeScreen() {
   const {
     calData,
     dailyTarget,
+    sessionDurationMinutes,
     completedSessionIds,
     isDayOff,
     markSessionComplete,
@@ -31,16 +33,29 @@ export default function HomeScreen() {
     markTodayOff,
     unmarkTodayOff,
     updateDailyTarget,
+    updateSessionDuration,
   } = useWorkoutHistory();
+
+  const exercises = useMemo(
+    () => fitSessionToBudget(session, sessionDurationMinutes),
+    [session, sessionDurationMinutes],
+  );
 
   const handleSessionComplete = useCallback(() => {
     markSessionComplete(activeSession);
   }, [activeSession, markSessionComplete]);
 
   const timer = useWorkoutTimer({
-    exercises: session.exercises,
+    exercises,
     onSessionComplete: handleSessionComplete,
   });
+
+  // Restart cleanly when the time budget changes mid-session so the timer and
+  // the (re-derived) exercise list stay in sync.
+  useEffect(() => {
+    timer.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionDurationMinutes]);
 
   const handleSessionChange = useCallback((idx: number) => {
     timer.reset();
@@ -63,9 +78,11 @@ export default function HomeScreen() {
         {showSettings && (
           <SettingsPanel
             dailyTarget={dailyTarget}
+            sessionDurationMinutes={sessionDurationMinutes}
             isDayOff={isDayOff}
             sessionColor={session.color}
             onUpdateTarget={updateDailyTarget}
+            onUpdateDuration={updateSessionDuration}
             onMarkTodayOff={async () => { await markTodayOff(); timer.reset(); }}
             onUnmarkTodayOff={unmarkTodayOff}
           />
@@ -112,6 +129,7 @@ export default function HomeScreen() {
         ) : (
           <WorkoutTab
             session={session}
+            exercises={exercises}
             timer={timer}
             isDayOff={isDayOff}
             completedSessionIds={completedSessionIds}
