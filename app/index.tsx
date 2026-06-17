@@ -9,8 +9,7 @@ import { useWorkoutTimer } from '../src/hooks/useWorkoutTimer';
 import { useWorkoutHistory } from '../src/hooks/useWorkoutHistory';
 import { Header } from '../src/components/Header';
 import { SettingsPanel } from '../src/components/SettingsPanel';
-import { SessionTabBar } from '../src/components/SessionTabBar';
-import { WorkoutTab } from '../src/components/WorkoutTab';
+import { SessionAccordion } from '../src/components/SessionAccordion';
 import { CalendarTab } from '../src/components/CalendarTab';
 import { Colors, Fonts } from '../src/theme';
 
@@ -19,7 +18,9 @@ type Tab = 'workout' | 'calendar';
 export default function HomeScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('workout');
-  const [activeSession, setActiveSession] = useState(0);
+  // Which session row is expanded (the active, timer-bound session). One at a
+  // time — true accordion. `null` means every row is collapsed.
+  const [expanded, setExpanded] = useState<number | null>(0);
   const [showSettings, setShowSettings] = useState(false);
 
   const {
@@ -40,31 +41,35 @@ export default function HomeScreen() {
     updateSkipDays,
     updateAvailableEquipment,
     unskipToday,
+    todayStr,
   } = useWorkoutHistory();
 
   // The day's sessions are generic ("Session 1"…N), count driven by dailyTarget.
   const daySessions = useMemo(() => buildDaySessions(dailyTarget), [dailyTarget]);
-  const safeActive = Math.min(activeSession, daySessions.length - 1);
-  const session = daySessions[safeActive];
   const effectiveDayOff = isDayOff || isTodaySkipDay;
 
-  // Keep the selected index in range when the target shrinks below it.
+  // The header/tab accent follows the expanded session, defaulting to the first.
+  const accentSession = daySessions[expanded ?? 0] ?? daySessions[0];
+
+  // The expanded session drives the single timer; its list is budget-fit (#1).
+  const expandedSession = expanded == null ? null : daySessions[expanded];
+  const expandedExercises = useMemo(
+    () => (expandedSession ? fitSessionToBudget(expandedSession, sessionDurationMinutes) : []),
+    [expandedSession, sessionDurationMinutes],
+  );
+
+  // Keep the expanded index in range when the target shrinks below it.
   useEffect(() => {
-    if (activeSession > daySessions.length - 1) setActiveSession(daySessions.length - 1);
+    if (expanded != null && expanded > daySessions.length - 1) setExpanded(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [daySessions.length]);
 
-  const exercises = useMemo(
-    () => fitSessionToBudget(session, sessionDurationMinutes),
-    [session, sessionDurationMinutes],
-  );
-
   const handleSessionComplete = useCallback(() => {
-    markSessionComplete(safeActive);
-  }, [safeActive, markSessionComplete]);
+    if (expanded != null) markSessionComplete(expanded);
+  }, [expanded, markSessionComplete]);
 
   const timer = useWorkoutTimer({
-    exercises,
+    exercises: expandedExercises,
     onSessionComplete: handleSessionComplete,
   });
 
@@ -75,21 +80,32 @@ export default function HomeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionDurationMinutes]);
 
-  const handleSessionChange = useCallback((idx: number) => {
+  // Expand a collapsed row (or collapse the open one). Either way the timer
+  // resets so a half-run session never bleeds into another row.
+  const handleToggle = useCallback((idx: number) => {
     timer.reset();
-    setActiveSession(idx);
+    setExpanded(prev => (prev === idx ? null : idx));
   }, [timer]);
 
   const handleNextSession = useCallback(() => {
-    handleSessionChange(safeActive + 1);
-  }, [safeActive, handleSessionChange]);
+    timer.reset();
+    setExpanded(prev => (prev == null ? null : Math.min(prev + 1, daySessions.length - 1)));
+  }, [timer, daySessions.length]);
+
+  // Today's completion count for a given session slot (powers the row badge and
+  // is the data #3 will surface more fully).
+  const todaysRuns = calData[todayStr()]?.sessionRuns ?? [];
+  const runCountFor = useCallback(
+    (slot: number) => todaysRuns.filter(r => r.sessionId === slot).length,
+    [todaysRuns],
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Sticky header section */}
       <View style={[styles.stickyHeader, { borderBottomColor: Colors.border }]}>
         <Header
-          session={session}
+          session={accentSession}
           showSettings={showSettings}
           onToggleSettings={() => setShowSettings(s => !s)}
           onOpenLibrary={() => router.push('/library')}
@@ -101,21 +117,13 @@ export default function HomeScreen() {
             skipDays={skipDays}
             availableEquipment={availableEquipment}
             isDayOff={isDayOff}
-            sessionColor={session.color}
+            sessionColor={accentSession.color}
             onUpdateTarget={updateDailyTarget}
             onUpdateDuration={updateSessionDuration}
             onToggleSkipDay={updateSkipDays}
             onToggleEquipment={updateAvailableEquipment}
             onMarkTodayOff={async () => { await markTodayOff(); timer.reset(); }}
             onUnmarkTodayOff={unmarkTodayOff}
-          />
-        )}
-        {!effectiveDayOff && (
-          <SessionTabBar
-            sessions={daySessions}
-            activeSession={safeActive}
-            completedSessionIds={completedSessionIds}
-            onSelect={handleSessionChange}
           />
         )}
       </View>
@@ -126,9 +134,9 @@ export default function HomeScreen() {
           <TouchableOpacity
             key={id}
             onPress={() => setActiveTab(id)}
-            style={[styles.tab, activeTab === id && { borderBottomColor: session.color, borderBottomWidth: 2 }]}
+            style={[styles.tab, activeTab === id && { borderBottomColor: accentSession.color, borderBottomWidth: 2 }]}
           >
-            <Text style={[styles.tabText, { color: activeTab === id ? session.color : Colors.textMuted, fontWeight: activeTab === id ? '700' : '400' }]}>
+            <Text style={[styles.tabText, { color: activeTab === id ? accentSession.color : Colors.textMuted, fontWeight: activeTab === id ? '700' : '400' }]}>
               {id === 'workout' ? 'WORKOUT' : 'CALENDAR'}
             </Text>
           </TouchableOpacity>
@@ -144,17 +152,19 @@ export default function HomeScreen() {
             onToggleDay={toggleDayOff}
           />
         ) : (
-          <WorkoutTab
-            session={session}
-            exercises={exercises}
-            timer={timer}
+          <SessionAccordion
+            sessions={daySessions}
+            sessionDurationMinutes={sessionDurationMinutes}
+            expanded={effectiveDayOff ? null : expanded}
+            onToggle={handleToggle}
             isDayOff={effectiveDayOff}
-            completedSessionIds={completedSessionIds}
-            dailyTarget={dailyTarget}
-            activeSession={safeActive}
-            totalSessions={daySessions.length}
-            onNextSession={handleNextSession}
             onUnskipToday={unskipToday}
+            expandedExercises={expandedExercises}
+            timer={timer}
+            runCountFor={runCountFor}
+            sessionsDone={completedSessionIds.size}
+            dailyTarget={dailyTarget}
+            onNextSession={handleNextSession}
           />
         )}
       </ScrollView>
