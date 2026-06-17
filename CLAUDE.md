@@ -167,6 +167,13 @@ These are not mutually exclusive: an owner-requested feature gets both `planned`
   in separate release merges.
 - Open feature/fix branches off `dev` and open the PR with `--base dev`.
 - Never open a PR directly against `main` unless it is an explicit release promotion.
+- **When opening a `dev → main` promotion PR, close the issues it ships.** Issue-closing
+  keywords only fire on the default branch, so PRs merged into `dev` leave their issues open
+  (they create a cross-reference, not a closing link). In the promotion PR: review the PRs
+  merged into `dev` since the last promotion, collect every issue they addressed, and add a
+  `Closes #N` line per issue to the promotion PR body — this links each issue to the PR and
+  auto-closes it when the promotion merges. If an issue must be closed before the merge, close
+  it right after opening the PR and reference the PR number in the close comment.
 
 ## Running Locally
 
