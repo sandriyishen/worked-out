@@ -33,7 +33,7 @@ export function SessionTabBar({ sessions, activeSession, completedSessionIds, on
             ]}
           >
             <Text style={[styles.pillText, { color: isActive ? s.color : Colors.textMuted, fontWeight: isActive ? '700' : '400' }]}>
-              {isDone ? '✓ ' : ''}{s.emoji} {s.name.split(' ')[0]}
+              {isDone ? '✓ ' : ''}{s.emoji} {s.name}
             </Text>
           </TouchableOpacity>
         );

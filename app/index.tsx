@@ -1,8 +1,9 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { SESSIONS } from '../src/data/sessions';
+import { buildDaySessions } from '../src/data/sessions';
+import { fitSessionToBudget } from '../src/data/exerciseLibrary';
 import { useWorkoutTimer } from '../src/hooks/useWorkoutTimer';
 import { useWorkoutHistory } from '../src/hooks/useWorkoutHistory';
 import { Header } from '../src/components/Header';
@@ -19,11 +20,12 @@ export default function HomeScreen() {
   const [activeSession, setActiveSession] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
 
-  const session = SESSIONS[activeSession];
-
   const {
     calData,
     dailyTarget,
+    sessionDurationMinutes,
+    skipDays,
+    isTodaySkipDay,
     completedSessionIds,
     isDayOff,
     markSessionComplete,
@@ -31,16 +33,43 @@ export default function HomeScreen() {
     markTodayOff,
     unmarkTodayOff,
     updateDailyTarget,
+    updateSessionDuration,
+    updateSkipDays,
+    unskipToday,
   } = useWorkoutHistory();
 
+  // The day's sessions are generic ("Session 1"…N), count driven by dailyTarget.
+  const daySessions = useMemo(() => buildDaySessions(dailyTarget), [dailyTarget]);
+  const safeActive = Math.min(activeSession, daySessions.length - 1);
+  const session = daySessions[safeActive];
+  const effectiveDayOff = isDayOff || isTodaySkipDay;
+
+  // Keep the selected index in range when the target shrinks below it.
+  useEffect(() => {
+    if (activeSession > daySessions.length - 1) setActiveSession(daySessions.length - 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [daySessions.length]);
+
+  const exercises = useMemo(
+    () => fitSessionToBudget(session, sessionDurationMinutes),
+    [session, sessionDurationMinutes],
+  );
+
   const handleSessionComplete = useCallback(() => {
-    markSessionComplete(activeSession);
-  }, [activeSession, markSessionComplete]);
+    markSessionComplete(safeActive);
+  }, [safeActive, markSessionComplete]);
 
   const timer = useWorkoutTimer({
-    exercises: session.exercises,
+    exercises,
     onSessionComplete: handleSessionComplete,
   });
+
+  // Restart cleanly when the time budget changes mid-session so the timer and
+  // the (re-derived) exercise list stay in sync.
+  useEffect(() => {
+    timer.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionDurationMinutes]);
 
   const handleSessionChange = useCallback((idx: number) => {
     timer.reset();
@@ -48,8 +77,8 @@ export default function HomeScreen() {
   }, [timer]);
 
   const handleNextSession = useCallback(() => {
-    handleSessionChange(activeSession + 1);
-  }, [activeSession, handleSessionChange]);
+    handleSessionChange(safeActive + 1);
+  }, [safeActive, handleSessionChange]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -63,27 +92,25 @@ export default function HomeScreen() {
         {showSettings && (
           <SettingsPanel
             dailyTarget={dailyTarget}
+            sessionDurationMinutes={sessionDurationMinutes}
+            skipDays={skipDays}
             isDayOff={isDayOff}
             sessionColor={session.color}
             onUpdateTarget={updateDailyTarget}
+            onUpdateDuration={updateSessionDuration}
+            onToggleSkipDay={updateSkipDays}
             onMarkTodayOff={async () => { await markTodayOff(); timer.reset(); }}
             onUnmarkTodayOff={unmarkTodayOff}
           />
         )}
-        {isDayOff && !showSettings && (
-          <View style={styles.dayOffBanner}>
-            <Text style={styles.dayOffBannerText}>🌴 Today is marked as a day off</Text>
-            <TouchableOpacity onPress={unmarkTodayOff}>
-              <Text style={styles.dayOffUndo}>undo</Text>
-            </TouchableOpacity>
-          </View>
+        {!effectiveDayOff && (
+          <SessionTabBar
+            sessions={daySessions}
+            activeSession={safeActive}
+            completedSessionIds={completedSessionIds}
+            onSelect={handleSessionChange}
+          />
         )}
-        <SessionTabBar
-          sessions={SESSIONS}
-          activeSession={activeSession}
-          completedSessionIds={completedSessionIds}
-          onSelect={handleSessionChange}
-        />
       </View>
 
       {/* Tab bar */}
@@ -112,13 +139,15 @@ export default function HomeScreen() {
         ) : (
           <WorkoutTab
             session={session}
+            exercises={exercises}
             timer={timer}
-            isDayOff={isDayOff}
+            isDayOff={effectiveDayOff}
             completedSessionIds={completedSessionIds}
             dailyTarget={dailyTarget}
-            activeSession={activeSession}
-            totalSessions={SESSIONS.length}
+            activeSession={safeActive}
+            totalSessions={daySessions.length}
             onNextSession={handleNextSession}
+            onUnskipToday={unskipToday}
           />
         )}
       </ScrollView>
@@ -134,29 +163,6 @@ const styles = StyleSheet.create({
   stickyHeader: {
     backgroundColor: Colors.bg,
     borderBottomWidth: 1,
-  },
-  dayOffBanner: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(58,58,82,0.4)',
-    borderWidth: 1,
-    borderColor: 'rgba(100,100,140,0.3)',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginHorizontal: 20,
-    marginBottom: 12,
-  },
-  dayOffBannerText: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    fontFamily: Fonts.mono,
-  },
-  dayOffUndo: {
-    fontSize: 11,
-    color: Colors.textMuted,
-    fontFamily: Fonts.mono,
   },
   tabBar: {
     flexDirection: 'row',

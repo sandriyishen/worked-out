@@ -9,6 +9,9 @@ function todayStr(): string {
 export function useWorkoutHistory() {
   const [calData, setCalData] = useState<CalendarData>({});
   const [dailyTarget, setDailyTarget] = useState(5);
+  const [sessionDurationMinutes, setSessionDurationMinutes] = useState<number | undefined>(undefined);
+  const [skipDays, setSkipDays] = useState<number[]>([]);
+  const [skipOverrides, setSkipOverrides] = useState<string[]>([]);
   const [completedSessionIds, setCompletedSessionIds] = useState<Set<number>>(new Set());
   const [isDayOff, setIsDayOff] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -19,6 +22,9 @@ export function useWorkoutHistory() {
       if (state) {
         setCalData(state.calData ?? {});
         setDailyTarget(state.settings?.dailyTarget ?? 5);
+        setSessionDurationMinutes(state.settings?.sessionDurationMinutes);
+        setSkipDays(state.settings?.skipDays ?? []);
+        setSkipOverrides(state.settings?.skipOverrides ?? []);
         const td = todayStr();
         const rec = (state.calData ?? {})[td];
         if (rec) {
@@ -30,9 +36,19 @@ export function useWorkoutHistory() {
     })();
   }, []);
 
-  const persist = useCallback(async (newCal: CalendarData, target: number) => {
-    await saveState({ calData: newCal, settings: { dailyTarget: target }, version: 3 });
-  }, []);
+  const persist = useCallback(async (
+    newCal: CalendarData,
+    target: number,
+    duration?: number,
+    skip: number[] = skipDays,
+    overrides: string[] = skipOverrides,
+  ) => {
+    await saveState({
+      calData: newCal,
+      settings: { dailyTarget: target, sessionDurationMinutes: duration, skipDays: skip, skipOverrides: overrides },
+      version: 3,
+    });
+  }, [skipDays, skipOverrides]);
 
   const markSessionComplete = useCallback(async (sessionId: number) => {
     setCompletedSessionIds(prev => {
@@ -58,13 +74,13 @@ export function useWorkoutHistory() {
           sessionRuns: [...(existing.sessionRuns ?? []), run],
         };
         const newCal = { ...cal, [td]: updated };
-        persist(newCal, dailyTarget);
+        persist(newCal, dailyTarget, sessionDurationMinutes);
         return newCal;
       });
 
       return next;
     });
-  }, [dailyTarget, persist]);
+  }, [dailyTarget, sessionDurationMinutes, persist]);
 
   const toggleDayOff = useCallback(async (ds: string, currentStatus?: string) => {
     let newCal: CalendarData;
@@ -85,8 +101,8 @@ export function useWorkoutHistory() {
     }
     setCalData(newCal);
     if (ds === todayStr()) setIsDayOff(currentStatus !== 'dayoff');
-    await persist(newCal, dailyTarget);
-  }, [calData, dailyTarget, persist]);
+    await persist(newCal, dailyTarget, sessionDurationMinutes);
+  }, [calData, dailyTarget, sessionDurationMinutes, persist]);
 
   const markTodayOff = useCallback(async () => {
     const td = todayStr();
@@ -96,26 +112,60 @@ export function useWorkoutHistory() {
     };
     setCalData(newCal);
     setIsDayOff(true);
-    await persist(newCal, dailyTarget);
-  }, [calData, dailyTarget, persist]);
+    await persist(newCal, dailyTarget, sessionDurationMinutes);
+  }, [calData, dailyTarget, sessionDurationMinutes, persist]);
 
   const unmarkTodayOff = useCallback(async () => {
     const td = todayStr();
     const { [td]: _removed, ...rest } = calData;
     setCalData(rest);
     setIsDayOff(false);
-    await persist(rest, dailyTarget);
-  }, [calData, dailyTarget, persist]);
+    await persist(rest, dailyTarget, sessionDurationMinutes);
+  }, [calData, dailyTarget, sessionDurationMinutes, persist]);
 
   const updateDailyTarget = useCallback(async (val: number) => {
     const target = Math.max(1, Math.min(10, val));
     setDailyTarget(target);
-    await persist(calData, target);
-  }, [calData, persist]);
+    await persist(calData, target, sessionDurationMinutes);
+  }, [calData, sessionDurationMinutes, persist]);
+
+  const updateSessionDuration = useCallback(async (val?: number) => {
+    const next = val == null ? undefined : Math.max(1, Math.min(30, val));
+    setSessionDurationMinutes(next);
+    await persist(calData, dailyTarget, next);
+  }, [calData, dailyTarget, persist]);
+
+  const updateSkipDays = useCallback(async (day: number) => {
+    const next = skipDays.includes(day) ? skipDays.filter(d => d !== day) : [...skipDays, day];
+    setSkipDays(next);
+    await persist(calData, dailyTarget, sessionDurationMinutes, next, skipOverrides);
+  }, [calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, persist]);
+
+  // Today is a rest day if its weekday is a recurring skip day and not overridden for today.
+  const isTodaySkipDay = skipDays.includes(new Date().getDay()) && !skipOverrides.includes(todayStr());
+
+  // Clears today's off state regardless of how it was set: removes a manual day-off
+  // record and/or cancels the recurring weekday skip for today only.
+  const unskipToday = useCallback(async () => {
+    const td = todayStr();
+    const { [td]: _removed, ...rest } = calData;
+    const nextOverrides =
+      skipDays.includes(new Date().getDay()) && !skipOverrides.includes(td)
+        ? [...skipOverrides, td]
+        : skipOverrides;
+    setCalData(rest);
+    setIsDayOff(false);
+    setSkipOverrides(nextOverrides);
+    await persist(rest, dailyTarget, sessionDurationMinutes, skipDays, nextOverrides);
+  }, [calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, persist]);
 
   return {
     calData,
     dailyTarget,
+    sessionDurationMinutes,
+    skipDays,
+    skipOverrides,
+    isTodaySkipDay,
     completedSessionIds,
     isDayOff,
     loaded,
@@ -124,6 +174,9 @@ export function useWorkoutHistory() {
     markTodayOff,
     unmarkTodayOff,
     updateDailyTarget,
+    updateSessionDuration,
+    updateSkipDays,
+    unskipToday,
     todayStr,
   };
 }

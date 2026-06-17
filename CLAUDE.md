@@ -146,6 +146,14 @@ These are not mutually exclusive: an owner-requested feature gets both `planned`
 
 ---
 
+## Branching & Pull Requests
+
+- **All pull requests target the `dev` branch, not `main`.** `dev` is the integration
+  branch where features are merged and tested together; `main` is promoted from `dev`
+  in separate release merges.
+- Open feature/fix branches off `dev` and open the PR with `--base dev`.
+- Never open a PR directly against `main` unless it is an explicit release promotion.
+
 ## Running Locally
 
 ```bash

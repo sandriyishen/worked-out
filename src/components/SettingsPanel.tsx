@@ -2,19 +2,25 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors, Fonts } from '../theme';
 
+const WEEKDAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
 interface Props {
   dailyTarget: number;
+  sessionDurationMinutes?: number;
+  skipDays: number[];
   isDayOff: boolean;
   sessionColor: string;
   onUpdateTarget: (val: number) => void;
+  onUpdateDuration: (val?: number) => void;
+  onToggleSkipDay: (day: number) => void;
   onMarkTodayOff: () => void;
   onUnmarkTodayOff: () => void;
 }
 
-export function SettingsPanel({ dailyTarget, isDayOff, sessionColor, onUpdateTarget, onMarkTodayOff, onUnmarkTodayOff }: Props) {
+export function SettingsPanel({ dailyTarget, sessionDurationMinutes, skipDays, isDayOff, sessionColor, onUpdateTarget, onUpdateDuration, onToggleSkipDay, onMarkTodayOff, onUnmarkTodayOff }: Props) {
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>DAILY TARGET</Text>
+      <Text style={styles.label}>SESSIONS PER DAY</Text>
       <View style={styles.targetRow}>
         <TouchableOpacity onPress={() => onUpdateTarget(dailyTarget - 1)} style={styles.stepper}>
           <Text style={styles.stepperText}>−</Text>
@@ -28,6 +34,51 @@ export function SettingsPanel({ dailyTarget, isDayOff, sessionColor, onUpdateTar
         </TouchableOpacity>
         <Text style={styles.hint}>Day marked ✓{'\n'}when you hit target</Text>
       </View>
+      <View style={styles.divider} />
+      <Text style={styles.label}>SESSION DURATION</Text>
+      <View style={styles.targetRow}>
+        <TouchableOpacity
+          onPress={() => onUpdateDuration(sessionDurationMinutes == null || sessionDurationMinutes <= 1 ? undefined : sessionDurationMinutes - 1)}
+          style={styles.stepper}
+        >
+          <Text style={styles.stepperText}>−</Text>
+        </TouchableOpacity>
+        <View style={styles.targetDisplay}>
+          <Text style={[styles.targetValue, { color: sessionColor }]}>
+            {sessionDurationMinutes == null ? 'Auto' : sessionDurationMinutes}
+          </Text>
+          <Text style={styles.targetUnit}>
+            {sessionDurationMinutes == null ? 'full session' : 'min/session'}
+          </Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => onUpdateDuration((sessionDurationMinutes ?? 0) + 1)}
+          style={styles.stepper}
+        >
+          <Text style={styles.stepperText}>+</Text>
+        </TouchableOpacity>
+        <Text style={styles.hint}>Trims or fills{'\n'}to fit your time</Text>
+      </View>
+      <View style={styles.divider} />
+      <Text style={styles.label}>SKIP DAYS</Text>
+      <View style={styles.skipRow}>
+        {WEEKDAY_LABELS.map((lbl, i) => {
+          const on = skipDays.includes(i);
+          return (
+            <TouchableOpacity
+              key={i}
+              onPress={() => onToggleSkipDay(i)}
+              style={[
+                styles.skipChip,
+                on && { backgroundColor: sessionColor, borderColor: sessionColor },
+              ]}
+            >
+              <Text style={[styles.skipChipText, on && styles.skipChipTextOn]}>{lbl}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <Text style={styles.skipHint}>Skipped weekdays show a rest screen automatically</Text>
       <View style={styles.divider} />
       {!isDayOff ? (
         <TouchableOpacity onPress={onMarkTodayOff} style={styles.dayOffBtn}>
@@ -99,6 +150,34 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.06)',
     marginVertical: 12,
+  },
+  skipRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  skipChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  skipChipText: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    fontFamily: Fonts.mono,
+    fontWeight: '700',
+  },
+  skipChipTextOn: {
+    color: '#000',
+  },
+  skipHint: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    fontFamily: Fonts.mono,
+    marginTop: 8,
   },
   dayOffBtn: {
     backgroundColor: 'rgba(255,255,255,0.06)',

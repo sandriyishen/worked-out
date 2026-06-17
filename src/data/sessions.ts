@@ -383,3 +383,18 @@ export const SESSIONS: WorkoutSession[] = [
     ],
   },
 ];
+
+/**
+ * Builds the day's session list of length `count` by cycling the curated
+ * built-in sessions and presenting them generically ("Session 1", "Session 2", …).
+ *
+ * The number of sessions shown is driven by AppSettings.dailyTarget. Each slot
+ * keeps its base session's exercises/color/emoji (for variety) but gets a generic
+ * name and a slot-index id so React keys and index-based completion stay unique.
+ */
+export function buildDaySessions(count: number): WorkoutSession[] {
+  return Array.from({ length: count }, (_, i) => {
+    const base = SESSIONS[i % SESSIONS.length];
+    return { ...base, id: i, name: `Session ${i + 1}`, time: '' };
+  });
+}
