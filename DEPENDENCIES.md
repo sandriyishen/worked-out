@@ -39,6 +39,10 @@ A `.nvmrc` file at the root of this repo pins the version for tools that respect
 
 Already required to clone the repo. Verify with `git --version`.
 
+### Peer dependencies (`.npmrc`)
+
+This repo commits an `.npmrc` with `legacy-peer-deps=true`. It is **required** for the React 19 / SDK 56 dependency graph to resolve — `npm ci` (which EAS Build runs) fails on the peer-optional conflicts without it. It applies automatically to `npm install`/`npm ci`, so there's nothing to do, but **don't remove it**, and keep `package-lock.json` in sync (`npm ci --dry-run` verifies).
+
 ---
 
 ## Path A — EAS Cloud Build
