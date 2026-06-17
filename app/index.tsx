@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 
 import { WorkoutSession } from '../src/types';
 import { useWorkoutTimer } from '../src/hooks/useWorkoutTimer';
-import { useWorkoutHistory } from '../src/hooks/useWorkoutHistory';
+import { useWorkoutHistoryContext } from '../src/state/WorkoutHistoryContext';
 import { useSessionPlan } from '../src/hooks/useSessionPlan';
 import { Header } from '../src/components/Header';
 import { SettingsPanel } from '../src/components/SettingsPanel';
@@ -49,7 +49,7 @@ export default function HomeScreen() {
     updateFocusAreas,
     unskipToday,
     todayStr,
-  } = useWorkoutHistory();
+  } = useWorkoutHistoryContext();
 
   // The day's sessions are a persisted, generated plan (#38 Phase C): stable day to
   // day, regenerated only on profile change or an explicit shuffle.
@@ -127,6 +127,7 @@ export default function HomeScreen() {
           showSettings={showSettings}
           onToggleSettings={() => setShowSettings(s => !s)}
           onOpenLibrary={() => router.push('/library')}
+          onOpenQuickSession={() => router.push('/quick-session')}
         />
         {showSettings && (
           <SettingsPanel

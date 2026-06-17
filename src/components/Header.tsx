@@ -8,9 +8,10 @@ interface Props {
   showSettings: boolean;
   onToggleSettings: () => void;
   onOpenLibrary: () => void;
+  onOpenQuickSession: () => void;
 }
 
-export function Header({ session, showSettings, onToggleSettings, onOpenLibrary }: Props) {
+export function Header({ session, showSettings, onToggleSettings, onOpenLibrary, onOpenQuickSession }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.row}>
@@ -22,6 +23,9 @@ export function Header({ session, showSettings, onToggleSettings, onOpenLibrary 
           </Text>
         </View>
         <View style={styles.actions}>
+          <TouchableOpacity onPress={onOpenQuickSession} style={styles.settingsBtn} accessibilityLabel="Quick session">
+            <Text style={styles.settingsBtnText}>⚡</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={onOpenLibrary} style={styles.settingsBtn} accessibilityLabel="Exercise library">
             <Text style={styles.settingsBtnText}>📚</Text>
           </TouchableOpacity>
