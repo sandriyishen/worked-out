@@ -17,6 +17,7 @@ import {
   EXERCISE_LIBRARY,
 } from '../src/data/exerciseLibrary';
 import { loadState } from '../src/storage';
+import { exerciseCompletionCounts } from '../src/data/ranking';
 import { useWorkoutHistoryContext } from '../src/state/WorkoutHistoryContext';
 import { CategoryGroupPicker } from '../src/components/CategoryGroupPicker';
 import { ExerciseToggles } from '../src/components/ExerciseToggles';
@@ -34,7 +35,7 @@ function prettyArea(area: BodyArea): string {
 
 export default function LibraryScreen() {
   const router = useRouter();
-  const { pinnedExerciseIds, favoriteExerciseIds, togglePin, toggleFavorite } = useWorkoutHistoryContext();
+  const { pinnedExerciseIds, favoriteExerciseIds, togglePin, toggleFavorite, calData } = useWorkoutHistoryContext();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [selectedCats, setSelectedCats] = useState<Set<ExerciseCategory>>(new Set());
@@ -45,6 +46,7 @@ export default function LibraryScreen() {
 
   const pinnedSet = useMemo(() => new Set(pinnedExerciseIds), [pinnedExerciseIds]);
   const favoriteSet = useMemo(() => new Set(favoriteExerciseIds), [favoriteExerciseIds]);
+  const completionCounts = useMemo(() => exerciseCompletionCounts(calData), [calData]);
 
   // Default the equipment filter to the user's saved profile (#28). An empty
   // profile leaves all equipment shown so the catalogue isn't hidden.
@@ -185,6 +187,7 @@ export default function LibraryScreen() {
             onToggle={() => setExpandedId(prev => (prev === item.id ? null : item.id))}
             pinned={pinnedSet.has(item.id)}
             favorited={favoriteSet.has(item.id)}
+            completedCount={completionCounts.get(item.id) ?? 0}
             onTogglePin={() => togglePin(item.id)}
             onToggleFavorite={() => toggleFavorite(item.id)}
           />
@@ -200,6 +203,7 @@ function ExerciseCard({
   onToggle,
   pinned,
   favorited,
+  completedCount,
   onTogglePin,
   onToggleFavorite,
 }: {
@@ -208,6 +212,7 @@ function ExerciseCard({
   onToggle: () => void;
   pinned: boolean;
   favorited: boolean;
+  completedCount: number;
   onTogglePin: () => void;
   onToggleFavorite: () => void;
 }) {
@@ -229,6 +234,9 @@ function ExerciseCard({
           <Text style={styles.metaText}>{ex.reps ?? `${ex.duration}s`}</Text>
           <Text style={styles.metaText}>· {EQUIPMENT_LABELS[ex.equipment]}</Text>
           {ex.contraindications && <Text style={styles.warnTag}>⚠</Text>}
+          {completedCount > 0 && (
+            <Text style={styles.doneCount}>✓ {completedCount}× done</Text>
+          )}
         </View>
         <View style={styles.catRow}>
           {ex.categories.slice(0, expanded ? ex.categories.length : 3).map(c => (
@@ -360,6 +368,7 @@ const styles = StyleSheet.create({
   typeTag: { fontSize: 10, fontFamily: Fonts.mono },
   metaText: { fontSize: 10, color: Colors.textDim, fontFamily: Fonts.mono },
   warnTag: { fontSize: 11 },
+  doneCount: { fontSize: 10, color: Colors.stretch, fontFamily: Fonts.mono },
   catRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
   catChip: {
     fontSize: 10,

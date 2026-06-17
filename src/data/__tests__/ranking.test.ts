@@ -3,6 +3,7 @@ import {
   DEFAULT_RANKING_WEIGHTS,
   effectiveDifficulty,
   effectiveEfficacy,
+  exerciseCompletionCounts,
   exercisePopularity,
   rankExercises,
   scoreExercise,
@@ -89,6 +90,29 @@ describe('rankExercises', () => {
     const c = makeExercise({ id: 'c', efficacy: 1 });
     const ranked = rankExercises([b, a, c]);
     expect(ranked.map(e => e.id)).toEqual(['a', 'b', 'c']); // a first; b before c (stable tie)
+  });
+});
+
+describe('exerciseCompletionCounts', () => {
+  it('sums raw per-exercise completions across runs, skipping legacy id-less runs', () => {
+    const calData: CalendarData = {
+      d1: {
+        date: 'd1',
+        sessionsCompleted: 2,
+        status: 'partial',
+        completedSessionIds: [0],
+        sessionRuns: [
+          { sessionId: 0, completedAt: 1, exerciseIds: ['a', 'b'] },
+          { sessionId: 0, completedAt: 2, exerciseIds: ['a'] },
+          { sessionId: 0, completedAt: 3 }, // legacy run, no ids
+        ],
+      },
+    };
+    const counts = exerciseCompletionCounts(calData);
+    expect(counts.get('a')).toBe(2);
+    expect(counts.get('b')).toBe(1);
+    expect(counts.get('never')).toBeUndefined();
+    expect(exerciseCompletionCounts({}).size).toBe(0);
   });
 });
 
