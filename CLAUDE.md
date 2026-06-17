@@ -191,14 +191,15 @@ signature changes or the user shuffles. The old hand-authored `SESSIONS` are gon
 ### Catalogue & safety groundwork — 🚧 In progress (Phase 1: #26 / #31 / #29)
 - **#31 (shipped in this branch):** `Exercise.contraindications?: string` — optional
   "stop if it hurts" note; render in the library detail and optionally the runner prep card.
-- **#26 (authored in this branch — awaiting human safety review before `main`):**
+- **#26 (authored content — expert safety review tracked for before app-store listing, #36):**
   `STANDALONE_EXERCISES` (~56 entries) de-dup-merged into `EXERCISE_LIBRARY` (built-ins win
   on id collision). The `ExerciseCategory` union grew to **30 categories** (complaint, strength,
   sculpting/fat-target, wellness) and `BodyArea` gained `arms`/`glutes`/`calves`/`ankles`/`eyes`;
   `CATEGORY_LABELS` covers every key. Coverage: **85 library exercises, every category ≥3**,
   each with a work/stretch mix and a `contraindications` note where a movement could aggravate
-  a condition. Category set was **developer-approved** first; content is quasi-medical and needs
-  a **human review before merging to `main`**.
+  a condition. Category set was **developer-approved** first; content is quasi-medical. An expert
+  reviewer isn't available yet, so the review (#36) does **not** block `main` — it's a backlog item
+  to clear **before listing the app on an app store**.
 - **#29 (shipped in this branch):** Jest (`jest-expo` preset) unit-test harness for the
   pure data/algorithm functions, incl. catalogue coverage + content-conformance tests. See the
   Testing convention below.
@@ -252,7 +253,7 @@ signature changes or the user shuffles. The old hand-authored `SESSIONS` are gon
 - **StyleSheet.create** for all styles; no inline objects except for dynamic values (session color, progress width).
 - **One hook per concern.** Timer logic in `useWorkoutTimer`, history/persistence in `useWorkoutHistory`, the generated plan in `useSessionPlan`. Keep them separate. `useWorkoutHistory` is shared app-wide through `WorkoutHistoryContext` (provided in `_layout.tsx`) so multiple screens stay in sync — consume it via `useWorkoutHistoryContext()`, don't call the hook twice.
 - **Unit tests for pure logic.** Data/algorithm functions (the session generator + `planSignature`, `EXERCISE_LIBRARY` composition, ranking/`exercisePopularity`, catalogue coverage) get Jest tests under `src/**/__tests__/*.test.ts`. Run with `npm test`. `tsc --noEmit` remains the type guardrail; jest globals are enabled via `"types": ["jest"]` in `tsconfig.json`.
-- **AI-authored exercise content needs a human safety review** before merging to `main` (movement cues are quasi-medical). New library content goes in `data/standaloneExercises.ts`.
+- **AI-authored exercise content needs an expert safety review** (movement cues are quasi-medical) — tracked in **#36**. No qualified reviewer is available at present, so this does **not** block `dev → main`; it's a backlog gate that must be cleared **before listing the app on an app store**. New library content still goes in `data/standaloneExercises.ts`.
 - **Keep root docs current.** Any change that alters user-facing behavior, the data model, file structure, build steps, or dependencies must update the affected root Markdown in the *same* change — never as a follow-up. `README.md` (features + project structure), `CLAUDE.md` (architecture, data model, conventions, planned-feature status), and `DEPENDENCIES.md` (build/toolchain versions). When a planned feature ships, move it out of "Planned" in both `README.md` and `CLAUDE.md`.
 - **The philosophy test.** Before adding any feature, ask: does this make it easier to move for 3 minutes right now?
 

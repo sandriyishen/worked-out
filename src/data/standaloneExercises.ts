@@ -20,8 +20,9 @@ import { Exercise } from '../types';
  *     condition (#31);
  *   - NOT duplicate an exercise already in the built-in sessions.
  *
- * ⚠ Movement instructions are quasi-medical. This AI-authored content requires
- * a human safety review before it is merged to `main`.
+ * ⚠ Movement instructions are quasi-medical. This AI-authored content needs an
+ * expert safety review (#36) — a backlog gate to clear before listing the app on
+ * an app store. It does not block `main` (no reviewer is available yet).
  */
 export const STANDALONE_EXERCISES: Exercise[] = [
   // ── Neck, headache & eyes ──────────────────────────────────────────────────
