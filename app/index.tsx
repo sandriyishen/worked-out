@@ -30,7 +30,6 @@ export default function HomeScreen() {
     skipDays,
     availableEquipment,
     isTodaySkipDay,
-    completedSessionIds,
     isDayOff,
     markSessionComplete,
     toggleDayOff,
@@ -92,8 +91,8 @@ export default function HomeScreen() {
     setExpanded(prev => (prev == null ? null : Math.min(prev + 1, daySessions.length - 1)));
   }, [timer, daySessions.length]);
 
-  // Today's completion count for a given session slot (powers the row badge and
-  // is the data #3 will surface more fully).
+  // Today's runs drive both the per-slot row badge and the day total. With repeat
+  // tracking (#3) the day total is the run count, so repeating a session counts.
   const todaysRuns = calData[todayStr()]?.sessionRuns ?? [];
   const runCountFor = useCallback(
     (slot: number) => todaysRuns.filter(r => r.sessionId === slot).length,
@@ -162,7 +161,7 @@ export default function HomeScreen() {
             expandedExercises={expandedExercises}
             timer={timer}
             runCountFor={runCountFor}
-            sessionsDone={completedSessionIds.size}
+            sessionsDone={todaysRuns.length}
             dailyTarget={dailyTarget}
             onNextSession={handleNextSession}
           />

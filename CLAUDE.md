@@ -147,13 +147,15 @@ The `exerciseLibrary.ts` file exports helper functions (`getExercisesByCategory`
 - Store custom sessions under a new `customSessions` key in `PersistedState`
 - The exercise library browser (feature #4) is the pick interface
 
-### Feature 3: Repeat session tracking
-- Already supported at the data layer — `DayRecord.sessionRuns` records each completion
-- **#25 surfaced part of this:** the collapsed row already shows a per-session "N× today" badge
-  derived from `sessionRuns`. Remaining UI work: a day-progress / calendar model that counts
-  `sessionRuns.length` rather than distinct `completedSessionIds` (today the day goal still counts
-  distinct slots completed)
-- Calendar stats would sum `sessionRuns.length` per day, not `completedSessionIds.size`
+### Feature 3: Repeat session tracking — ✅ Implemented
+- Every completion counts, including repeats of the same session. `markSessionComplete`
+  (`useWorkoutHistory`) now sets `DayRecord.sessionsCompleted = sessionRuns.length` and derives the
+  day `status` (`partial`/`completed`) from the **run count vs `dailyTarget`** — not from distinct
+  `completedSessionIds`. The `completedSessionIds` set is still kept/persisted as "which sessions
+  were run at least once," but no longer gates the daily total.
+- UI: the day-progress line + done card (`sessionsDone`) read today's `sessionRuns.length`; the
+  collapsed `SessionRow` shows the per-session "✓ N× today" badge (added in #25); the calendar
+  appends the run count to a day's status glyph on multi-run days (e.g. `✓ 3`).
 
 ### Feature 4: Exercise library screen — ✅ Implemented
 - `app/library.tsx` — reached from the 📚 button in `Header`; `router.push('/library')`.

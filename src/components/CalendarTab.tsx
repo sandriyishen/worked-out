@@ -102,6 +102,8 @@ export function CalendarTab({ calData, dailyTarget, onToggleDay }: Props) {
           const isToday = ds === today;
           const isFuture = ds > today;
           const col = status ? STATUS_COLORS[status] : null;
+          // Show the run count on multi-run days so repeats are visible (#3).
+          const runs = calData[ds]?.sessionRuns?.length ?? 0;
 
           return (
             <TouchableOpacity
@@ -121,7 +123,11 @@ export function CalendarTab({ calData, dailyTarget, onToggleDay }: Props) {
               <Text style={[styles.dayNumber, { color: col ?? (isToday ? Colors.text : Colors.textDim) }]}>
                 {day}
               </Text>
-              {status && <Text style={styles.statusEmoji}>{STATUS_EMOJI[status]}</Text>}
+              {status && (
+                <Text style={styles.statusEmoji}>
+                  {STATUS_EMOJI[status]}{runs > 1 ? ` ${runs}` : ''}
+                </Text>
+              )}
             </TouchableOpacity>
           );
         })}
