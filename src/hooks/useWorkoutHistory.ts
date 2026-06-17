@@ -60,34 +60,38 @@ export function useWorkoutHistory() {
   }, [skipDays, skipOverrides, availableEquipment]);
 
   const markSessionComplete = useCallback(async (sessionId: number) => {
-    setCompletedSessionIds(prev => {
-      const next = new Set([...prev, sessionId]);
-      const count = next.size;
-      const td = todayStr();
+    const td = todayStr();
+    // The set tracks which sessions have been run at least once (record-keeping);
+    // the day's *count* comes from sessionRuns so repeats are counted (#3).
+    setCompletedSessionIds(prev => new Set([...prev, sessionId]));
 
-      setCalData(cal => {
-        const existing: DayRecord = cal[td] ?? {
-          date: td,
-          sessionsCompleted: 0,
-          status: 'partial',
-          completedSessionIds: [],
-          sessionRuns: [],
-        };
-        const status = count >= dailyTarget ? 'completed' : 'partial';
-        const run = { sessionId, completedAt: Date.now() };
-        const updated: DayRecord = {
-          ...existing,
-          sessionsCompleted: count,
-          status,
-          completedSessionIds: [...next],
-          sessionRuns: [...(existing.sessionRuns ?? []), run],
-        };
-        const newCal = { ...cal, [td]: updated };
-        persist(newCal, dailyTarget, sessionDurationMinutes);
-        return newCal;
-      });
-
-      return next;
+    setCalData(cal => {
+      const existing: DayRecord = cal[td] ?? {
+        date: td,
+        sessionsCompleted: 0,
+        status: 'partial',
+        completedSessionIds: [],
+        sessionRuns: [],
+      };
+      const run = { sessionId, completedAt: Date.now() };
+      const sessionRuns = [...(existing.sessionRuns ?? []), run];
+      const completedSessionIds = Array.from(
+        new Set([...(existing.completedSessionIds ?? []), sessionId]),
+      );
+      // Repeat tracking (#3): every run counts toward the daily target, including
+      // repeats of the same session — so the total is the run count, not unique IDs.
+      const runCount = sessionRuns.length;
+      const status = runCount >= dailyTarget ? 'completed' : 'partial';
+      const updated: DayRecord = {
+        ...existing,
+        sessionsCompleted: runCount,
+        status,
+        completedSessionIds,
+        sessionRuns,
+      };
+      const newCal = { ...cal, [td]: updated };
+      persist(newCal, dailyTarget, sessionDurationMinutes);
+      return newCal;
     });
   }, [dailyTarget, sessionDurationMinutes, persist]);
 

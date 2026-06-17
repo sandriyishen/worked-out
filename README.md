@@ -26,6 +26,7 @@ The goal is to make movement the path of least resistance — something you do i
 - **Configurable daily sessions** — choose how many sessions per day (1–10); they're presented as Session 1…N
 - **Per-session duration** — set a time budget (or leave it on Auto) and the exercise list trims or extends to fit
 - **Collapsible session list** — each day's sessions stack as expandable rows showing total time and how many times you've run each one today; tap one to expand its runner
+- **Repeat tracking** — run the same session as many times as you like; every run counts toward your daily total and shows in history (the calendar marks multi-run days)
 - **Timed workout runner** with prep countdown, bilateral side-switch cues, pause/resume, and progress bar
 - **Calendar view** showing completion history with done / partial / missed / day-off status
 - **Weekly skip days & Day Off** — pick recurring rest weekdays or mark today off; rest days show a beach screen with one-tap un-skip
@@ -37,8 +38,7 @@ The goal is to make movement the path of least resistance — something you do i
 ## Planned Features
 
 1. **Exercise customization** — swap or modify individual exercises within any session
-2. **Repeat tracking** — do the same session twice in a day and have both runs counted in history
-3. **Quick sessions** — specify a complaint and a time budget; the app generates a targeted stretch or workout session on the spot
+2. **Quick sessions** — specify a complaint and a time budget; the app generates a targeted stretch or workout session on the spot
 
 ---
 
