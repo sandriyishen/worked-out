@@ -49,10 +49,11 @@ src/
     sessionGenerator.ts     # The selection engine (#38 Phase C): generateDayPlan() builds N
                             #   themed sessions from the ranked, equipment-filtered library
                             #   (focus quota + posture staple + budget fill + alternation,
-                            #   seeded for shuffle); planSignature(); generateQuickSession() (#5 core)
+                            #   seeded for shuffle); guarantees pinned exercises (#2);
+                            #   planSignature(); generateQuickSession() (#5 core)
     ranking.ts              # Pure exercise ranking score (#38 Phase B): efficacy + ease +
-                            #   popularity + focus-match, tunable weights; exercisePopularity()
-                            #   (from SessionRun.exerciseIds — also serves #27)
+                            #   popularity + focus-match (+ additive favorite boost, #2), tunable
+                            #   weights; exercisePopularity() (from SessionRun.exerciseIds — also #27)
     exerciseLibrary.ts      # EXERCISE_LIBRARY = de-duped(BUILT_IN_EXERCISES +
                             #   STANDALONE_EXERCISES) — single source of truth; owns PREP_SECS;
                             #   getExerciseById(); query helpers; CATEGORY_LABELS / CATEGORY_GROUPS
@@ -65,9 +66,11 @@ src/
     useWorkoutTimer.ts      # Phase machine: idle → prep → active → done
                             #   Handles bilateral switch cues, pause, reset
     useWorkoutHistory.ts    # Calendar state, completion tracking, day-off + weekly skip-day
-                            #   logic; settings incl. equipment (#28) + focusAreas (#38)
+                            #   logic; settings incl. equipment (#28) + focusAreas (#38) +
+                            #   pinned/favorite exercise ids (#2); togglePin() / toggleFavorite()
     useSessionPlan.ts       # Owns the persisted generated plan (#38 Phase C): rehydrate,
-                            #   regenerate on profile-signature change, shuffle()
+                            #   regenerate on profile-signature change (incl. pins/favorites, #2),
+                            #   shuffle()
 
   components/
     Header.tsx              # App title + session color accent + Settings (⚙) button only (#46:
@@ -85,7 +88,10 @@ src/
                             #   generated plan + Shuffle button (#38) + beach rest screen + pro tips
     SessionRow.tsx          # One collapsible session row header: name, total time, today's run count (#25)
     SessionRunner.tsx       # Expanded-row run controls: prep/active/done cards + start + exercise list
-    ExerciseList.tsx        # Expandable exercise cards (no diagrams)
+    ExerciseList.tsx        # Expandable exercise cards (no diagrams) + per-row favorite/pin toggles
+                            #   when idle/done (#2); pinned/favorite badges always shown
+    ExerciseToggles.tsx     # Shared ★ favorite + 📌 pin toggle pair (#2); used by library cards
+                            #   and ExerciseList rows
     CalendarTab.tsx         # Monthly calendar grid + stats
 ```
 
@@ -130,6 +136,8 @@ interface AppSettings {
   skipOverrides?: string[];         // YYYY-MM-DD dates where a recurring skip is cancelled
   availableEquipment?: Equipment[]; // equipment the user has (#28); filters the generator pool + library
   focusAreas?: ExerciseCategory[];  // categories to target (#38 Phase C); feeds the generator
+  pinnedExerciseIds?: string[];     // exercises guaranteed into the generated plan, surviving shuffle (#2)
+  favoriteExerciseIds?: string[];   // bookmarked exercises; soft ranking boost + library filter (#2)
 }
 
 // The persisted, generated session plan (#38 Phase C) — stored under its own key.
@@ -171,10 +179,27 @@ signature changes or the user shuffles. The old hand-authored `SESSIONS` are gon
   the beach rest screen + pro tips moved into `SessionAccordion`. `SessionTabBar` and `WorkoutTab`
   were deleted.
 
-### Feature 2: Exercise customization per session
-- Add `isCustom?: boolean` and an optional `customExercises?: Exercise[]` to `WorkoutSession`
-- Store custom sessions under a new `customSessions` key in `PersistedState`
-- The exercise library browser (feature #4) is the pick interface
+### Feature 2: Favorite & pin exercises (merged #2 + #33) — ✅ Implemented
+The original "swap/modify exercises within a session" was **re-scoped** after #38 deleted the
+curated sessions: sessions are now a generated, persisted `SessionPlan`, so there's no stable
+session to edit. Instead the user shapes the routine by **favoriting** and **pinning individual
+exercises**, which fits the generated-plan model cleanly. This merges #33.
+- **Pin (hard):** a pinned exercise is *guaranteed* to appear in the day's plan and survives
+  shuffle / profile changes; only its session placement & order vary on shuffle.
+- **Favorite (soft):** a bookmark — filterable in the library and given a **ranking boost** so it
+  shows up more often (no guarantee).
+- **State lives in `AppSettings`** (`pinnedExerciseIds` / `favoriteExerciseIds`), persisted via
+  `useWorkoutHistory` (`togglePin` / `toggleFavorite`, exposed through the shared context). Storing
+  it in settings — not the ephemeral plan — is why "survive shuffle" is automatic (no slot-keying).
+- **Generator (`sessionGenerator.ts`):** `GeneratorProfile` carries pinned/favorite ids; both join
+  `planSignature` (toggling refreshes the plan). Pinned ids are resolved straight from the library
+  (bypassing the equipment filter — explicit intent), seed-shuffled, round-robin-distributed across
+  sessions, and force-added once (guaranteed, never duplicated). Favorites feed `ranking.ts`'s
+  additive `favorite` weight.
+- **UI:** shared `ExerciseToggles` (★ + 📌) on every library card (+ a "Favorites only" filter) and
+  every workout-view `ExerciseList` row (toggles shown when idle/done, since pinning regenerates the
+  plan; badges always visible). The library now consumes the shared `WorkoutHistoryContext`.
+- **Deferred:** literal in-session swap/modify (the old #2 scope) — file a fresh issue if wanted.
 
 ### Feature 3: Repeat session tracking — ✅ Implemented
 - Every completion counts, including repeats of the same session. `markSessionComplete`
@@ -198,7 +223,8 @@ signature changes or the user shuffles. The old hand-authored `SESSIONS` are gon
 - Expandable cards show type/duration/equipment + category chips; the detail adds target areas
   and the `contraindications` note (#31) when set. (The "appears in N built-in sessions" line was
   removed in #38 Phase C, when the curated sessions went away.)
-- **Deferred:** the "Add to session" action waits on #2 (custom sessions) — not built yet.
+- Each card carries the shared `ExerciseToggles` (★ favorite + 📌 pin) and badges, plus a
+  "Favorites only" filter (#2); the screen consumes the shared `WorkoutHistoryContext`.
 
 ### Catalogue & safety groundwork — 🚧 In progress (Phase 1: #26 / #31 / #29)
 - **#31 (shipped in this branch):** `Exercise.contraindications?: string` — optional

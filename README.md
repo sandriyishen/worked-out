@@ -26,6 +26,7 @@ The goal is to make movement the path of least resistance — something you do i
 - **Quick session** — "my neck hurts, I've got 5 minutes": pick a complaint and a time (5/10/15 min or custom) and get a ready-to-run session generated on the spot
 - **Personalized session plan** — your day's sessions are generated from the exercise library around your focus areas, equipment, count, and time budget, then kept the same each day so a routine sticks
 - **Shuffle** — bored of the current set? One tap regenerates fresh sessions from your profile
+- **Favorite & pin exercises** — ★ favorite the ones you love (filterable, and they show up more often) and 📌 pin the ones you want guaranteed in every day's plan, surviving shuffles; both from the library or the workout view
 - **Focus areas** — pick what to target (grouped: complaints, strength, sculpting, wellness) and sessions are built to cover them
 - **Configurable daily sessions** — choose how many sessions per day (1–10) and a per-session time budget (or Auto)
 - **Collapsible session list** — each day's sessions stack as expandable rows showing total time and how many times you've run each one today; tap one to expand its runner
@@ -42,7 +43,9 @@ The goal is to make movement the path of least resistance — something you do i
 
 ## Planned Features
 
-1. **Exercise customization** — swap or modify individual exercises within any session
+1. **Build a custom session from scratch** — assemble your own session from the library
+2. **First-run onboarding** — a quick guided setup on first launch
+3. **Opt-in gentle movement reminders** — nudges to take a 3-minute break
 
 ---
 
@@ -91,7 +94,7 @@ src/
   data/
     builtInExercises.ts # Original curated exercise definitions (flat library data)
     exerciseLibrary.ts  # Exercise catalogue (single source of truth) + query helpers
-    ranking.ts          # Pure exercise ranking score + popularity (efficacy/ease/popularity/focus)
+    ranking.ts          # Pure exercise ranking score + popularity (efficacy/ease/popularity/focus + favorite boost)
     sessionGenerator.ts # Generates the day's themed sessions from the ranked library (+ quick sessions)
     standaloneExercises.ts # Library-grown exercises, merged into the catalogue
     __tests__/          # Jest unit tests for the data/algorithm layer
@@ -108,7 +111,8 @@ src/
                          #   tab) + Shuffle + beach rest screen
     SessionRow.tsx       # One collapsible session row header (name, total time, runs today)
     SessionRunner.tsx    # Expanded-row run controls (prep/active/done + exercise list)
-    ExerciseList.tsx
+    ExerciseList.tsx     # Exercise cards + per-row favorite/pin toggles
+    ExerciseToggles.tsx  # Shared ★ favorite + 📌 pin toggles (library + workout view)
     CalendarTab.tsx
 ```
 
