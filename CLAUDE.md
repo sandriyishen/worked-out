@@ -37,10 +37,15 @@ src/
   storage/index.ts          # Thin AsyncStorage wrapper (loadState/saveState)
 
   data/
-    sessions.ts             # 5 built-in WorkoutSessions (full library metadata each) +
-                            #   buildDaySessions(n): generic Session 1…N by cycling built-ins
-    exerciseLibrary.ts      # EXERCISE_LIBRARY = de-duped(built-in session exercises +
-                            #   STANDALONE_EXERCISES); query helpers;
+    builtInExercises.ts     # BUILT_IN_EXERCISES: the 30 curated exercise defs (flat library
+                            #   data since #38 Phase A — moved out of sessions.ts)
+    sessions.ts             # SESSION_PRESETS (metadata + ordered exercise-id lists) hydrated
+                            #   into SESSIONS via getExerciseById; re-exports PREP_SECS;
+                            #   buildDaySessions(n): generic Session 1…N by cycling built-ins;
+                            #   sessionsContainingExercise()
+    exerciseLibrary.ts      # EXERCISE_LIBRARY = de-duped(BUILT_IN_EXERCISES +
+                            #   STANDALONE_EXERCISES) — single source of truth; owns PREP_SECS;
+                            #   getExerciseById(); query helpers;
                             #   fitSessionToBudget() trims/extends a session to a time budget
     standaloneExercises.ts  # STANDALONE_EXERCISES: library-grown content (#26), merged into
                             #   EXERCISE_LIBRARY so it's reachable when building sessions (not
@@ -164,6 +169,23 @@ The `exerciseLibrary.ts` file exports helper functions (`getExercisesByCategory`
 - Algorithm in `exerciseLibrary.ts → generateQuickSession(complaint, durationMin)`
 - Algorithm selects exercises from the library matching the category, fitting within time budget
 - Run the generated session using the existing `useWorkoutTimer` hook — no new timer logic needed
+- **Note:** the #38 epic supersedes this standalone engine — build **one** selection core that
+  powers both daily and quick sessions (quick = the generator with N=1).
+
+### Epic #38: Generate daily sessions from the unified library (ranking + coverage)
+- **Phase A — invert data ownership (✅ shipped, behavior-preserving):** exercise definitions
+  now live in the library, not in sessions. The 30 built-in defs moved to
+  `data/builtInExercises.ts`; `EXERCISE_LIBRARY` is `de-duped(BUILT_IN_EXERCISES +
+  STANDALONE_EXERCISES)` (no longer derived from `SESSIONS`). Curated sessions are
+  `SESSION_PRESETS` — metadata + ordered exercise-id lists — hydrated into `SESSIONS` by
+  `getExerciseById` (session `exercises` share library object identity; no duplicated data).
+  `PREP_SECS` now lives in `exerciseLibrary.ts` (re-exported from `sessions.ts` for the runner).
+  No user-visible change; `tsc` + Jest green.
+- **Phase B — ranking (planned):** add `Exercise.efficacy?`/`difficulty?`; history-derived
+  popularity from `DayRecord.sessionRuns`; score = weighted efficacy + ease + popularity + focus match.
+- **Phase C — generator + coverage (planned):** add `AppSettings.focusAreas`; replace
+  `buildDaySessions`'s `i % 5` cycling with a deterministic, coverage-quota'd generator; synthesize
+  session themes. One engine shared with #5.
 
 ---
 

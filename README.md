@@ -82,8 +82,9 @@ src/
   theme/index.ts        # Colors and font constants
   storage/index.ts      # AsyncStorage wrapper
   data/
-    sessions.ts         # Built-in sessions + buildDaySessions() (generic per-day list)
-    exerciseLibrary.ts  # Exercise catalogue + fitSessionToBudget() (duration trim/extend)
+    builtInExercises.ts # Curated built-in exercise definitions (flat library data)
+    sessions.ts         # Session presets (id-lists) + buildDaySessions() (generic per-day list)
+    exerciseLibrary.ts  # Exercise catalogue (single source of truth) + fitSessionToBudget()
     standaloneExercises.ts # Library-grown exercises, merged into the catalogue
     __tests__/          # Jest unit tests for the data/algorithm layer
   hooks/

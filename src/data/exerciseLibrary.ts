@@ -1,6 +1,9 @@
 import { Exercise, ExerciseCategory, BodyArea, Equipment, WorkoutSession } from '../types';
-import { PREP_SECS, SESSIONS } from './sessions';
+import { BUILT_IN_EXERCISES } from './builtInExercises';
 import { STANDALONE_EXERCISES } from './standaloneExercises';
+
+/** Prep countdown (seconds) shown before each exercise; also its per-exercise time cost. */
+export const PREP_SECS = 7;
 
 /** Removes duplicate exercises by `id`, keeping the first occurrence. */
 function dedupeById(exercises: Exercise[]): Exercise[] {
@@ -9,20 +12,31 @@ function dedupeById(exercises: Exercise[]): Exercise[] {
 }
 
 /**
- * The exercise library is the single source of truth for all exercises, and the
- * pool the session machinery draws from (`fitSessionToBudget`, and the #5 quick
- * generator) — so library content is reachable when building sessions, not just
- * in the #4 browser.
+ * The exercise library is the single source of truth for all exercises (#38):
+ * exercise data lives here, and the curated `SESSIONS` reference it by id rather
+ * than defining their own copies. It is also the pool the session machinery draws
+ * from (`fitSessionToBudget`, and the #5 quick generator), so library content is
+ * reachable when building sessions, not just in the #4 browser.
  *
- * It combines the exercises curated into the 5 built-in `SESSIONS` with the
- * `STANDALONE_EXERCISES` added for broad per-complaint coverage (feature #26).
- * Sessions are listed first so that, on an id collision, the curated built-in
+ * It combines the `BUILT_IN_EXERCISES` curated for the 5 built-in sessions with
+ * the `STANDALONE_EXERCISES` added for broad per-complaint coverage (feature #26).
+ * Built-ins are listed first so that, on an id collision, the curated built-in
  * version wins over a standalone entry.
  */
 export const EXERCISE_LIBRARY: Exercise[] = dedupeById([
-  ...SESSIONS.flatMap(s => s.exercises),
+  ...BUILT_IN_EXERCISES,
   ...STANDALONE_EXERCISES,
 ]);
+
+/** Fast id → exercise lookup over the library (used to hydrate session presets). */
+const EXERCISE_BY_ID: Map<string, Exercise> = new Map(
+  EXERCISE_LIBRARY.map(e => [e.id, e]),
+);
+
+/** Returns the library exercise with the given id, or `undefined` if none. */
+export function getExerciseById(id: string): Exercise | undefined {
+  return EXERCISE_BY_ID.get(id);
+}
 
 export function getExercisesByCategory(category: ExerciseCategory): Exercise[] {
   return EXERCISE_LIBRARY.filter(e => e.categories.includes(category));
@@ -165,8 +179,3 @@ export const EQUIPMENT_LABELS: Record<Equipment, string> = {
   wall: 'Wall',
   doorframe: 'Doorframe',
 };
-
-/** Built-in sessions whose exercise list contains the given exercise id. */
-export function sessionsContainingExercise(id: string): WorkoutSession[] {
-  return SESSIONS.filter(s => s.exercises.some(e => e.id === id));
-}

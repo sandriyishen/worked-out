@@ -15,8 +15,8 @@ import {
   CATEGORY_LABELS,
   EQUIPMENT_LABELS,
   EXERCISE_LIBRARY,
-  sessionsContainingExercise,
 } from '../src/data/exerciseLibrary';
+import { sessionsContainingExercise } from '../src/data/sessions';
 import { loadState } from '../src/storage';
 import { Colors, Fonts } from '../src/theme';
 
