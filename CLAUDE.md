@@ -175,6 +175,35 @@ These are not mutually exclusive: an owner-requested feature gets both `planned`
   auto-closes it when the promotion merges. If an issue must be closed before the merge, close
   it right after opening the PR and reference the PR number in the close comment.
 
+## Project Tracking
+
+Planned work is tracked on the **"Worked Out — Roadmap"** GitHub Project (Projects v2, user-scoped:
+`https://github.com/users/sandriyishen/projects/2`). Every `planned`/`feature` issue (and tracked
+tech-debt) is an item with three custom fields:
+
+- **Order** (number) — global execution sequence; **work issues in ascending Order.** This matches
+  the "step N" in each issue's pinned execution-order comment.
+- **Feature** (single-select) — the feature epic that houses the issue: `Exercise Library`,
+  `Session Runner Redesign`, `Quick Sessions`, `Custom Sessions`, `Onboarding & Personalization`,
+  `Testing Infrastructure`.
+- **Status** — `Todo` → `In Progress` → `Done`.
+
+**Status rules:**
+- **Starting an issue → set Status to `In Progress`** (no GitHub trigger exists for "work started", so
+  do it manually). Look up the item id and edit, e.g.:
+  ```bash
+  ITEM=$(gh project item-list 2 --owner @me --format json | jq -r '.items[]|select(.content.number==25).id')
+  FID=$(gh project field-list 2 --owner @me --format json | jq -r '.fields[]|select(.name=="Status").id')
+  OPT=$(gh project field-list 2 --owner @me --format json | jq -r '.fields[]|select(.name=="Status").options[]|select(.name=="In Progress").id')
+  gh project item-edit --project-id PVT_kwHOAYLoKs4Ba4LH --id "$ITEM" --field-id "$FID" --single-select-option-id "$OPT"
+  ```
+- **Closing an issue → `Done` is automatic.** The project's built-in "Item closed → Done" workflow
+  handles it, so closing via a `dev → main` promotion PR (`Closes #N`) or `gh issue close` moves the
+  item to Done with no manual step. (If it ever doesn't, enable that workflow under the project's
+  **Workflows** settings, or set Status to Done manually.)
+- **New tracked issue → add it to the project** and set its `Order` + `Feature` (new items default to
+  `Todo` via the built-in "Item added → Todo" workflow).
+
 ## Running Locally
 
 ```bash
