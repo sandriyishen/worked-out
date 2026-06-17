@@ -26,18 +26,8 @@ import { Exercise } from '../types';
  */
 export const STANDALONE_EXERCISES: Exercise[] = [
   // ── Neck, headache & eyes ──────────────────────────────────────────────────
-  {
-    id: 'lib-chin-tucks',
-    name: 'Chin Tuck Holds',
-    duration: 30,
-    reps: '10',
-    type: 'work',
-    desc: 'Sit or stand tall. Without tilting your head, glide your chin straight back to make a "double chin," hold 2 seconds, release. Strengthens the deep neck flexors that hold your head over your spine.',
-    contraindications: 'Ease off if you feel dizziness or tingling down the arms.',
-    categories: ['neck_pain', 'posture', 'tension_headache'],
-    targetAreas: ['neck'],
-    equipment: 'none',
-  },
+  // Note: chin tucks live in the built-in sessions as "Cervical Retractions" (s5-e6),
+  // and the hand-assisted lateral neck stretch as "Upper Trap Stretch" (s2-e5).
   {
     id: 'lib-suboccipital-release',
     name: 'Sub-Occipital Press',
@@ -56,19 +46,6 @@ export const STANDALONE_EXERCISES: Exercise[] = [
     desc: 'Unclench your teeth and let your tongue rest low. Massage your temples and jaw hinge in slow circles while letting your jaw hang slightly open. Eases referred head tension from clenching.',
     categories: ['tension_headache'],
     targetAreas: ['neck'],
-    equipment: 'none',
-  },
-  {
-    id: 'lib-lateral-neck-stretch',
-    name: 'Lateral Neck Stretch',
-    duration: 40,
-    type: 'stretch',
-    bilateral: true,
-    switchAt: 20,
-    desc: 'Drop your right ear toward your right shoulder, keeping shoulders down. For more, rest your right hand lightly over your head — no pulling. Switch sides at the halfway cue.',
-    contraindications: 'Use the weight of your hand only; never yank the head.',
-    categories: ['neck_pain', 'shoulder_tension', 'tension_headache'],
-    targetAreas: ['neck', 'shoulders'],
     equipment: 'none',
   },
   {
@@ -159,17 +136,9 @@ export const STANDALONE_EXERCISES: Exercise[] = [
   },
 
   // ── Upper back, posture & shoulders ────────────────────────────────────────
-  {
-    id: 'lib-wall-angels',
-    name: 'Wall Angels',
-    duration: 40,
-    reps: '10',
-    type: 'work',
-    desc: 'Stand with your back against a wall, arms up in a goalpost. Slide your arms up and down while keeping wrists, elbows and head in contact with the wall. Rebuilds upright posture.',
-    categories: ['upper_back_pain', 'posture', 'shoulder_tension', 'shoulder_sculpting'],
-    targetAreas: ['upper_back', 'shoulders'],
-    equipment: 'wall',
-  },
+  // Note: wall angels, the chair thoracic extension, and the doorframe pec stretch
+  // already exist in the built-in sessions (s2-e4, s3-e4, s2-e6) — see those for
+  // upper-back/posture coverage. The entries below add what the built-ins lack.
   {
     id: 'lib-scapular-squeezes',
     name: 'Scapular Squeezes',
@@ -180,28 +149,6 @@ export const STANDALONE_EXERCISES: Exercise[] = [
     categories: ['upper_back_pain', 'posture', 'back_strength'],
     targetAreas: ['upper_back'],
     equipment: 'none',
-  },
-  {
-    id: 'lib-doorway-chest-opener',
-    name: 'Doorway Chest Opener',
-    duration: 40,
-    type: 'stretch',
-    desc: 'Stand in a doorway, forearms on the frame, elbows at shoulder height. Step one foot through until you feel an open stretch across the chest and front shoulders.',
-    contraindications: 'Ease into it; don\'t force the stretch if you have a shoulder injury.',
-    categories: ['posture', 'chest_sculpting', 'shoulder_tension', 'upper_back_pain'],
-    targetAreas: ['chest', 'shoulders'],
-    equipment: 'doorframe',
-  },
-  {
-    id: 'lib-seated-thoracic-extension',
-    name: 'Chair Thoracic Extension',
-    duration: 30,
-    type: 'stretch',
-    desc: 'Sit, hands behind your head. Gently arch your upper back over the top edge of the chair back, opening the chest and looking slightly up. Mobilises a stiff mid-back.',
-    contraindications: 'Move only through the upper back; stop if it pinches the lower back.',
-    categories: ['upper_back_pain', 'posture'],
-    targetAreas: ['upper_back'],
-    equipment: 'chair',
   },
   {
     id: 'lib-seated-cat-cow',
@@ -300,17 +247,7 @@ export const STANDALONE_EXERCISES: Exercise[] = [
   },
 
   // ── Core & belly ───────────────────────────────────────────────────────────
-  {
-    id: 'lib-standing-bicycle-crunch',
-    name: 'Standing Bicycle Crunch',
-    duration: 40,
-    reps: '20',
-    type: 'work',
-    desc: 'Hands behind your head. Bring one knee up and across to meet the opposite elbow, alternating sides at a steady pace. Works the waistline without getting on the floor.',
-    categories: ['belly_fat', 'core_strength', 'cardio'],
-    targetAreas: ['core'],
-    equipment: 'none',
-  },
+  // Note: the standing bicycle crunch already exists as a built-in (s2-e3).
   {
     id: 'lib-stomach-vacuum',
     name: 'Stomach Vacuum',
@@ -404,16 +341,7 @@ export const STANDALONE_EXERCISES: Exercise[] = [
   },
 
   // ── Shoulders & arms sculpting ─────────────────────────────────────────────
-  {
-    id: 'lib-arm-circles',
-    name: 'Arm Circles',
-    duration: 40,
-    type: 'work',
-    desc: 'Arms straight out to the sides at shoulder height. Make small fast circles forward, then reverse halfway through. Burns out and tones the shoulders while raising your energy.',
-    categories: ['shoulder_sculpting', 'arm_sculpting', 'shoulder_tension', 'energizing'],
-    targetAreas: ['shoulders', 'arms'],
-    equipment: 'none',
-  },
+  // Note: arm circles already exist as a built-in (s4-e1).
   {
     id: 'lib-wall-shoulder-press',
     name: 'Wall Shoulder Press',
@@ -577,17 +505,6 @@ export const STANDALONE_EXERCISES: Exercise[] = [
     desc: 'March in place driving each knee up to hip height, pumping your arms. Keep a brisk, steady rhythm. Raises your heart rate and wakes up the whole body in seconds.',
     categories: ['cardio', 'energizing', 'lower_body', 'balance'],
     targetAreas: ['legs', 'core'],
-    equipment: 'none',
-  },
-  {
-    id: 'lib-jumping-jacks',
-    name: 'Jumping Jacks',
-    duration: 40,
-    type: 'work',
-    desc: 'Jump your feet wide while sweeping your arms overhead, then back. Keep a steady bounce. A classic full-body cardio burst to spike energy between tasks.',
-    contraindications: 'Swap for low-impact "step jacks" (step side to side) if you have knee, ankle, or hip sensitivity.',
-    categories: ['cardio', 'energizing', 'general_fitness'],
-    targetAreas: ['full_body'],
     equipment: 'none',
   },
   {
