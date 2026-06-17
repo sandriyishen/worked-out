@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CalendarData, DayRecord, Equipment } from '../types';
+import { CalendarData, DayRecord, Equipment, ExerciseCategory } from '../types';
 import { loadState, saveState } from '../storage';
 
 function todayStr(): string {
@@ -13,6 +13,7 @@ export function useWorkoutHistory() {
   const [skipDays, setSkipDays] = useState<number[]>([]);
   const [skipOverrides, setSkipOverrides] = useState<string[]>([]);
   const [availableEquipment, setAvailableEquipment] = useState<Equipment[]>([]);
+  const [focusAreas, setFocusAreas] = useState<ExerciseCategory[]>([]);
   const [completedSessionIds, setCompletedSessionIds] = useState<Set<number>>(new Set());
   const [isDayOff, setIsDayOff] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -27,6 +28,7 @@ export function useWorkoutHistory() {
         setSkipDays(state.settings?.skipDays ?? []);
         setSkipOverrides(state.settings?.skipOverrides ?? []);
         setAvailableEquipment(state.settings?.availableEquipment ?? []);
+        setFocusAreas(state.settings?.focusAreas ?? []);
         const td = todayStr();
         const rec = (state.calData ?? {})[td];
         if (rec) {
@@ -45,6 +47,7 @@ export function useWorkoutHistory() {
     skip: number[] = skipDays,
     overrides: string[] = skipOverrides,
     equipment: Equipment[] = availableEquipment,
+    focus: ExerciseCategory[] = focusAreas,
   ) => {
     await saveState({
       calData: newCal,
@@ -54,12 +57,13 @@ export function useWorkoutHistory() {
         skipDays: skip,
         skipOverrides: overrides,
         availableEquipment: equipment,
+        focusAreas: focus,
       },
       version: 3,
     });
-  }, [skipDays, skipOverrides, availableEquipment]);
+  }, [skipDays, skipOverrides, availableEquipment, focusAreas]);
 
-  const markSessionComplete = useCallback(async (sessionId: number) => {
+  const markSessionComplete = useCallback(async (sessionId: number, exerciseIds: string[] = []) => {
     const td = todayStr();
     // The set tracks which sessions have been run at least once (record-keeping);
     // the day's *count* comes from sessionRuns so repeats are counted (#3).
@@ -73,7 +77,8 @@ export function useWorkoutHistory() {
         completedSessionIds: [],
         sessionRuns: [],
       };
-      const run = { sessionId, completedAt: Date.now() };
+      // Record the exercises actually completed so popularity (#38) / #27 are exact.
+      const run = { sessionId, completedAt: Date.now(), exerciseIds };
       const sessionRuns = [...(existing.sessionRuns ?? []), run];
       const completedSessionIds = Array.from(
         new Set([...(existing.completedSessionIds ?? []), sessionId]),
@@ -162,6 +167,14 @@ export function useWorkoutHistory() {
     await persist(calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, next);
   }, [availableEquipment, calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, persist]);
 
+  const updateFocusAreas = useCallback(async (category: ExerciseCategory) => {
+    const next = focusAreas.includes(category)
+      ? focusAreas.filter(c => c !== category)
+      : [...focusAreas, category];
+    setFocusAreas(next);
+    await persist(calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, availableEquipment, next);
+  }, [focusAreas, calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, availableEquipment, persist]);
+
   // Today is a rest day if its weekday is a recurring skip day and not overridden for today.
   const isTodaySkipDay = skipDays.includes(new Date().getDay()) && !skipOverrides.includes(todayStr());
 
@@ -187,6 +200,7 @@ export function useWorkoutHistory() {
     skipDays,
     skipOverrides,
     availableEquipment,
+    focusAreas,
     isTodaySkipDay,
     completedSessionIds,
     isDayOff,
@@ -199,6 +213,7 @@ export function useWorkoutHistory() {
     updateSessionDuration,
     updateSkipDays,
     updateAvailableEquipment,
+    updateFocusAreas,
     unskipToday,
     todayStr,
   };

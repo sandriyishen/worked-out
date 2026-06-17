@@ -6,7 +6,7 @@ import {
   getExercisesWithNoEquipment,
   getExercisesForEquipment,
 } from '../exerciseLibrary';
-import { SESSIONS, buildDaySessions, sessionsContainingExercise } from '../sessions';
+import { BUILT_IN_EXERCISES } from '../builtInExercises';
 import { STANDALONE_EXERCISES } from '../standaloneExercises';
 
 describe('EXERCISE_LIBRARY composition', () => {
@@ -15,12 +15,10 @@ describe('EXERCISE_LIBRARY composition', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('includes every exercise from the built-in sessions', () => {
+  it('includes every built-in exercise definition', () => {
     const libIds = new Set(EXERCISE_LIBRARY.map(e => e.id));
-    for (const session of SESSIONS) {
-      for (const ex of session.exercises) {
-        expect(libIds.has(ex.id)).toBe(true);
-      }
+    for (const ex of BUILT_IN_EXERCISES) {
+      expect(libIds.has(ex.id)).toBe(true);
     }
   });
 
@@ -31,43 +29,14 @@ describe('EXERCISE_LIBRARY composition', () => {
     }
   });
 
-  it('a built-in session exercise wins over a standalone entry on id collision', () => {
-    // Any id shared between the two pools should resolve to the session object.
-    const sessionById = new Map(
-      SESSIONS.flatMap(s => s.exercises).map(e => [e.id, e]),
-    );
+  it('a built-in exercise wins over a standalone entry on id collision', () => {
+    // Any id shared between the two pools should resolve to the built-in object.
+    const builtInById = new Map(BUILT_IN_EXERCISES.map(e => [e.id, e]));
     for (const ex of EXERCISE_LIBRARY) {
-      if (sessionById.has(ex.id)) {
-        expect(ex).toBe(sessionById.get(ex.id));
+      if (builtInById.has(ex.id)) {
+        expect(ex).toBe(builtInById.get(ex.id));
       }
     }
-  });
-});
-
-describe('session presets reference the library (#38)', () => {
-  it('every session exercise is the exact library object (no duplicated definitions)', () => {
-    const libById = new Map(EXERCISE_LIBRARY.map(e => [e.id, e]));
-    for (const session of SESSIONS) {
-      for (const ex of session.exercises) {
-        expect(ex).toBe(libById.get(ex.id));
-      }
-    }
-  });
-
-  it('buildDaySessions cycles the presets without duplicating exercise data', () => {
-    const day = buildDaySessions(7); // > 5 forces a wrap around the 5 presets
-    expect(day).toHaveLength(7);
-    const libIds = new Set(EXERCISE_LIBRARY.map(e => e.id));
-    day.forEach((session, i) => {
-      expect(session.name).toBe(`Session ${i + 1}`);
-      session.exercises.forEach(ex => expect(libIds.has(ex.id)).toBe(true));
-    });
-  });
-
-  it('sessionsContainingExercise finds the built-in sessions for an exercise id', () => {
-    expect(sessionsContainingExercise('s1-e1').map(s => s.id)).toEqual([1]);
-    // A standalone-only id appears in no built-in session.
-    expect(sessionsContainingExercise(STANDALONE_EXERCISES[0].id)).toEqual([]);
   });
 });
 

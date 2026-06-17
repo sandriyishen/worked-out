@@ -100,6 +100,13 @@ export interface WorkoutSession {
 export interface SessionRun {
   sessionId: number;
   completedAt: number;
+  /**
+   * The library ids of the exercises actually completed in this run (#38 Phase C).
+   * Lets popularity (#38) and the per-exercise counter (#27) be derived exactly,
+   * instead of inferring exercises from a session slot. Optional for back-compat
+   * with runs recorded before Phase C.
+   */
+  exerciseIds?: string[];
 }
 
 export interface DayRecord {
@@ -120,10 +127,32 @@ export interface AppSettings {
   skipDays?: number[];             // recurring rest weekdays, 0=Sun … 6=Sat (Date.getDay())
   skipOverrides?: string[];        // YYYY-MM-DD dates where a recurring skip is cancelled
   availableEquipment?: Equipment[]; // equipment the user has (chair/desk/wall/doorframe); undefined/empty = none
+  focusAreas?: ExerciseCategory[];  // categories the user wants to target (#38 Phase C); feeds the generator
 }
 
 export interface PersistedState {
   calData: CalendarData;
   settings: AppSettings;
   version: number;
+}
+
+/** One generated session in the persisted plan: theme metadata + ordered exercise ids. */
+export interface PlannedSession {
+  name: string;
+  emoji: string;
+  focus: string;
+  color: string;
+  exerciseIds: string[];
+}
+
+/**
+ * The user's persisted, dynamically-generated session plan (#38 Phase C). Generated
+ * once and reused every day so the routine is stable; regenerated only when the
+ * profile `signature` changes (focus areas / equipment / target / duration) or the
+ * user shuffles (which bumps `seed`).
+ */
+export interface SessionPlan {
+  signature: string;
+  seed: number;
+  sessions: PlannedSession[];
 }

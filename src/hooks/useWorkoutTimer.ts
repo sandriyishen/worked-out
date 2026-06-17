@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Exercise } from '../types';
-import { PREP_SECS } from '../data/sessions';
+import { PREP_SECS } from '../data/exerciseLibrary';
 
 export type WorkoutPhase = 'idle' | 'prep' | 'active' | 'done';
 

@@ -3,10 +3,10 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-import { buildDaySessions } from '../src/data/sessions';
-import { fitSessionToBudget } from '../src/data/exerciseLibrary';
+import { WorkoutSession } from '../src/types';
 import { useWorkoutTimer } from '../src/hooks/useWorkoutTimer';
 import { useWorkoutHistory } from '../src/hooks/useWorkoutHistory';
+import { useSessionPlan } from '../src/hooks/useSessionPlan';
 import { Header } from '../src/components/Header';
 import { SettingsPanel } from '../src/components/SettingsPanel';
 import { SessionAccordion } from '../src/components/SessionAccordion';
@@ -14,6 +14,11 @@ import { CalendarTab } from '../src/components/CalendarTab';
 import { Colors, Fonts } from '../src/theme';
 
 type Tab = 'workout' | 'calendar';
+
+// Accent used before the generated plan has hydrated (first launch / mid-regenerate).
+const FALLBACK_SESSION: WorkoutSession = {
+  id: 0, name: '', emoji: '', time: '', focus: '', color: Colors.work, exercises: [],
+};
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -29,8 +34,10 @@ export default function HomeScreen() {
     sessionDurationMinutes,
     skipDays,
     availableEquipment,
+    focusAreas,
     isTodaySkipDay,
     isDayOff,
+    loaded,
     markSessionComplete,
     toggleDayOff,
     markTodayOff,
@@ -39,45 +46,56 @@ export default function HomeScreen() {
     updateSessionDuration,
     updateSkipDays,
     updateAvailableEquipment,
+    updateFocusAreas,
     unskipToday,
     todayStr,
   } = useWorkoutHistory();
 
-  // The day's sessions are generic ("Session 1"…N), count driven by dailyTarget.
-  const daySessions = useMemo(() => buildDaySessions(dailyTarget), [dailyTarget]);
+  // The day's sessions are a persisted, generated plan (#38 Phase C): stable day to
+  // day, regenerated only on profile change or an explicit shuffle.
+  const { daySessions, shuffle } = useSessionPlan({
+    dailyTarget,
+    sessionDurationMinutes,
+    focusAreas,
+    availableEquipment,
+    calData,
+    ready: loaded,
+  });
   const effectiveDayOff = isDayOff || isTodaySkipDay;
 
   // The header/tab accent follows the expanded session, defaulting to the first.
-  const accentSession = daySessions[expanded ?? 0] ?? daySessions[0];
+  const accentSession = daySessions[expanded ?? 0] ?? daySessions[0] ?? FALLBACK_SESSION;
 
-  // The expanded session drives the single timer; its list is budget-fit (#1).
-  const expandedSession = expanded == null ? null : daySessions[expanded];
+  // The expanded session drives the single timer; its exercises are the plan's.
+  const expandedSession = expanded == null ? null : daySessions[expanded] ?? null;
   const expandedExercises = useMemo(
-    () => (expandedSession ? fitSessionToBudget(expandedSession, sessionDurationMinutes) : []),
-    [expandedSession, sessionDurationMinutes],
+    () => expandedSession?.exercises ?? [],
+    [expandedSession],
   );
 
-  // Keep the expanded index in range when the target shrinks below it.
+  // Keep the expanded index in range when the plan shrinks below it.
   useEffect(() => {
-    if (expanded != null && expanded > daySessions.length - 1) setExpanded(null);
+    if (daySessions.length > 0 && expanded != null && expanded > daySessions.length - 1) {
+      setExpanded(daySessions.length - 1);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [daySessions.length]);
 
   const handleSessionComplete = useCallback(() => {
-    if (expanded != null) markSessionComplete(expanded);
-  }, [expanded, markSessionComplete]);
+    if (expanded != null) markSessionComplete(expanded, expandedExercises.map(e => e.id));
+  }, [expanded, expandedExercises, markSessionComplete]);
 
   const timer = useWorkoutTimer({
     exercises: expandedExercises,
     onSessionComplete: handleSessionComplete,
   });
 
-  // Restart cleanly when the time budget changes mid-session so the timer and
-  // the (re-derived) exercise list stay in sync.
+  // Reset the timer whenever the plan changes (regenerate / shuffle / duration edit)
+  // so a running session never bleeds onto a freshly-generated exercise list.
   useEffect(() => {
     timer.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionDurationMinutes]);
+  }, [daySessions]);
 
   // Expand a collapsed row (or collapse the open one). Either way the timer
   // resets so a half-run session never bleeds into another row.
@@ -87,6 +105,7 @@ export default function HomeScreen() {
   }, [timer]);
 
   const handleNextSession = useCallback(() => {
+    if (daySessions.length === 0) return;
     timer.reset();
     setExpanded(prev => (prev == null ? null : Math.min(prev + 1, daySessions.length - 1)));
   }, [timer, daySessions.length]);
@@ -115,12 +134,14 @@ export default function HomeScreen() {
             sessionDurationMinutes={sessionDurationMinutes}
             skipDays={skipDays}
             availableEquipment={availableEquipment}
+            focusAreas={focusAreas}
             isDayOff={isDayOff}
             sessionColor={accentSession.color}
             onUpdateTarget={updateDailyTarget}
             onUpdateDuration={updateSessionDuration}
             onToggleSkipDay={updateSkipDays}
             onToggleEquipment={updateAvailableEquipment}
+            onToggleFocus={updateFocusAreas}
             onMarkTodayOff={async () => { await markTodayOff(); timer.reset(); }}
             onUnmarkTodayOff={unmarkTodayOff}
           />
@@ -153,7 +174,6 @@ export default function HomeScreen() {
         ) : (
           <SessionAccordion
             sessions={daySessions}
-            sessionDurationMinutes={sessionDurationMinutes}
             expanded={effectiveDayOff ? null : expanded}
             onToggle={handleToggle}
             isDayOff={effectiveDayOff}
@@ -164,6 +184,8 @@ export default function HomeScreen() {
             sessionsDone={todaysRuns.length}
             dailyTarget={dailyTarget}
             onNextSession={handleNextSession}
+            onShuffle={shuffle}
+            hasFocusAreas={focusAreas.length > 0}
           />
         )}
       </ScrollView>

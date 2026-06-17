@@ -1,4 +1,4 @@
-import { Exercise, ExerciseCategory } from '../types';
+import { CalendarData, Exercise, ExerciseCategory } from '../types';
 
 /**
  * Exercise ranking (#38 Phase B).
@@ -89,4 +89,29 @@ export function rankExercises(exercises: Exercise[], ctx: ScoreContext = {}): Ex
     .map((ex, i) => ({ ex, i, score: scoreExercise(ex, ctx) }))
     .sort((a, b) => b.score - a.score || a.i - b.i)
     .map(e => e.ex);
+}
+
+/**
+ * Derives a normalised (0–1) popularity per exercise id from completion history —
+ * the popularity signal `scoreExercise` consumes, and the data #27's per-exercise
+ * counter needs. Reads the exact `SessionRun.exerciseIds` recorded at completion
+ * (#38 Phase C); runs from before Phase C carry no ids and are skipped. The
+ * most-completed exercise scores 1; an empty history yields an empty map.
+ *
+ * Pure (depends only on `types`), so it stays in this cycle-free module.
+ */
+export function exercisePopularity(calData: CalendarData): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const day of Object.values(calData)) {
+    for (const run of day.sessionRuns ?? []) {
+      for (const id of run.exerciseIds ?? []) {
+        counts.set(id, (counts.get(id) ?? 0) + 1);
+      }
+    }
+  }
+  const max = Math.max(0, ...counts.values());
+  if (max === 0) return new Map();
+  const popularity = new Map<string, number>();
+  for (const [id, count] of counts) popularity.set(id, count / max);
+  return popularity;
 }

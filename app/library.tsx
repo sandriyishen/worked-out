@@ -16,7 +16,6 @@ import {
   EQUIPMENT_LABELS,
   EXERCISE_LIBRARY,
 } from '../src/data/exerciseLibrary';
-import { sessionsContainingExercise } from '../src/data/sessions';
 import { loadState } from '../src/storage';
 import { Colors, Fonts } from '../src/theme';
 
@@ -194,7 +193,6 @@ function ExerciseCard({
   onToggle: () => void;
 }) {
   const typeColor = ex.type === 'work' ? Colors.work : Colors.stretch;
-  const appearances = sessionsContainingExercise(ex.id).length;
 
   return (
     <View style={styles.card}>
@@ -232,12 +230,6 @@ function ExerciseCard({
           <Text style={styles.detailLine}>
             <Text style={styles.detailKey}>Targets: </Text>
             {ex.targetAreas.map(prettyArea).join(', ')}
-          </Text>
-          <Text style={styles.detailLine}>
-            <Text style={styles.detailKey}>Appears in: </Text>
-            {appearances === 0
-              ? 'Library only'
-              : `${appearances} built-in ${appearances === 1 ? 'session' : 'sessions'}`}
           </Text>
           {ex.contraindications && (
             <View style={styles.warnBox}>
