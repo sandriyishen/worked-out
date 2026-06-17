@@ -1,8 +1,27 @@
 import { WorkoutSession } from '../types';
+import { getExerciseById } from './exerciseLibrary';
 
-export const PREP_SECS = 7;
+// PREP_SECS is owned by the library (it's the per-exercise time cost) but has
+// historically been imported from here by the runner; keep that import path stable.
+export { PREP_SECS } from './exerciseLibrary';
 
-export const SESSIONS: WorkoutSession[] = [
+/**
+ * A curated built-in session: presentation metadata plus an ordered list of
+ * exercise ids referencing the library (#38). The exercise *definitions* live in
+ * `builtInExercises.ts` / the `EXERCISE_LIBRARY`; presets keep only the expert
+ * sequencing, so there is no duplicated exercise data.
+ */
+interface SessionPreset {
+  id: number;
+  name: string;
+  emoji: string;
+  time: string;
+  focus: string;
+  color: string;
+  exerciseIds: string[];
+}
+
+const SESSION_PRESETS: SessionPreset[] = [
   {
     id: 1,
     name: 'Morning Ignition',
@@ -10,77 +29,7 @@ export const SESSIONS: WorkoutSession[] = [
     time: '9–10am',
     focus: 'Core activation + spine wake-up',
     color: '#E8531A',
-    exercises: [
-      {
-        id: 's1-e1',
-        name: 'Standing Torso Rotations',
-        duration: 30,
-        type: 'stretch',
-        desc: 'Stand feet shoulder-width, arms extended to sides. Rotate your torso left then right slowly. Only your upper body moves — keep hips square. Loosens the thoracic spine.',
-        contraindications: 'Rotate slowly within a pain-free range; ease off if you have an acute back or disc injury.',
-        categories: ['back_pain', 'upper_back_pain', 'lower_back_pain', 'posture'],
-        targetAreas: ['upper_back', 'lower_back', 'core'],
-        equipment: 'none',
-      },
-      {
-        id: 's1-e2',
-        name: 'Desk Push-Ups',
-        duration: 40,
-        reps: '12–15',
-        type: 'work',
-        desc: 'Hands on desk edge, slightly wider than shoulders. Lower your chest toward the desk then push up. Squeeze at the top. Targets chest and front shoulders.',
-        contraindications: 'Use a sturdy desk that won\'t slide or tip.',
-        categories: ['upper_body', 'upper_body_strength', 'chest_sculpting', 'arm_sculpting', 'general_fitness'],
-        targetAreas: ['chest', 'shoulders', 'arms'],
-        equipment: 'desk',
-      },
-      {
-        id: 's1-e3',
-        name: 'Standing Crunch Pulse',
-        duration: 40,
-        reps: '20',
-        type: 'work',
-        desc: 'Hands behind head, elbows wide. Crunch one elbow toward the opposite rising knee. Alternate sides slowly. Fires the obliques — twist from your waist, not your neck.',
-        contraindications: 'Twist from the waist, not the neck; skip if you have an acute lower-back injury.',
-        categories: ['core_strength', 'belly_fat', 'general_fitness'],
-        targetAreas: ['core'],
-        equipment: 'none',
-      },
-      {
-        id: 's1-e4',
-        name: 'Neck Rolls',
-        duration: 30,
-        type: 'stretch',
-        desc: 'Slowly tilt right ear toward right shoulder, lower chin to chest, then tilt to left. Half-circles only. NEVER roll the head backwards — it compresses the cervical spine.',
-        contraindications: 'Half-circles only — never roll the head backward, which compresses the cervical spine.',
-        categories: ['neck_pain', 'tension_headache', 'posture'],
-        targetAreas: ['neck'],
-        equipment: 'none',
-      },
-      {
-        id: 's1-e5',
-        name: 'Shoulder Cross-Body Stretch',
-        duration: 34,
-        type: 'stretch',
-        bilateral: true,
-        switchAt: 17,
-        desc: 'Pull right arm across chest with your left hand. Hold 15s. Switch arms. Releases rear deltoid and upper back tightness. Keep your shoulder down — don\'t shrug.',
-        categories: ['shoulder_tension', 'upper_back_pain', 'upper_body'],
-        targetAreas: ['shoulders', 'upper_back'],
-        equipment: 'none',
-      },
-      {
-        id: 's1-e6',
-        name: 'Cat-Cow (Standing)',
-        duration: 30,
-        type: 'stretch',
-        desc: 'Hands on knees, hinge slightly forward. Arch back and look up (cow), then round back and tuck chin (cat). Move slowly between the two. Decompresses lumbar and thoracic spine.',
-        contraindications: 'Move slowly within a comfortable range.',
-        categories: ['back_pain', 'upper_back_pain', 'lower_back_pain', 'posture'],
-        targetAreas: ['upper_back', 'lower_back'],
-        equipment: 'none',
-      },
-    ],
+    exerciseIds: ['s1-e1', 's1-e2', 's1-e3', 's1-e4', 's1-e5', 's1-e6'],
   },
   {
     id: 2,
@@ -89,80 +38,7 @@ export const SESSIONS: WorkoutSession[] = [
     time: '11am–12pm',
     focus: 'Core + upper body',
     color: '#D4A017',
-    exercises: [
-      {
-        id: 's2-e1',
-        name: 'Chest Opener Stretch',
-        duration: 30,
-        type: 'stretch',
-        desc: 'Interlace fingers behind your back at hip level. Squeeze shoulder blades together and gently lift arms behind you. Hold. Opens pecs and chest. Counteracts keyboard hunching.',
-        contraindications: 'Lift the arms only as far as is comfortable; don\'t force it with a shoulder injury.',
-        categories: ['shoulder_tension', 'upper_back_pain', 'posture'],
-        targetAreas: ['chest', 'shoulders', 'upper_back'],
-        equipment: 'none',
-      },
-      {
-        id: 's2-e2',
-        name: 'Plank Hold',
-        duration: 40,
-        reps: '20–30s',
-        type: 'work',
-        desc: 'Forearms on floor, elbows under shoulders. Keep body in a straight line — hips neither sagging nor raised. Brace your core hard. If form breaks, drop to knees.',
-        contraindications: 'Keep your back flat — drop to your knees if your hips sag or your lower back aches.',
-        categories: ['core_strength', 'belly_fat', 'upper_body_strength', 'back_strength', 'general_fitness'],
-        targetAreas: ['core', 'shoulders', 'arms'],
-        equipment: 'none',
-      },
-      {
-        id: 's2-e3',
-        name: 'Standing Bicycle Crunches',
-        duration: 40,
-        reps: '20',
-        type: 'work',
-        desc: 'Hands behind head. Slowly rotate right elbow toward left knee as it rises. Twist from the waist — not the neck. Alternate sides in a controlled, slow rhythm.',
-        contraindications: 'Twist from the waist, not the neck.',
-        categories: ['core_strength', 'belly_fat', 'cardio', 'general_fitness'],
-        targetAreas: ['core'],
-        equipment: 'none',
-      },
-      {
-        id: 's2-e4',
-        name: 'Wall Angels',
-        duration: 30,
-        reps: '8–10 slow',
-        type: 'work',
-        desc: 'Back flat against wall, arms in a W shape, elbows and wrists touching the wall. Slowly slide arms up to a Y, then back down, keeping all contact points on the wall. Fixes rounded shoulders.',
-        categories: ['shoulder_tension', 'upper_back_pain', 'shoulder_sculpting', 'posture'],
-        targetAreas: ['shoulders', 'upper_back'],
-        equipment: 'wall',
-      },
-      {
-        id: 's2-e5',
-        name: 'Upper Trap Stretch',
-        duration: 34,
-        type: 'stretch',
-        bilateral: true,
-        switchAt: 17,
-        desc: 'Tilt right ear toward right shoulder. Place right hand gently on head for light pressure. Hold 15s. Switch sides. Directly releases the neck and trapezius tension from screen time.',
-        contraindications: 'Use light hand pressure only; never pull the head hard.',
-        categories: ['neck_pain', 'shoulder_tension', 'tension_headache'],
-        targetAreas: ['neck', 'shoulders'],
-        equipment: 'none',
-      },
-      {
-        id: 's2-e6',
-        name: 'Doorframe Chest Stretch',
-        duration: 44,
-        type: 'stretch',
-        bilateral: true,
-        switchAt: 22,
-        desc: 'Place right forearm on doorframe, elbow at 90°. Lean body gently forward until you feel a stretch across the right chest. Hold 20s. Switch sides. Stretches pec minor.',
-        contraindications: 'Ease into the stretch; don\'t force it with a shoulder injury.',
-        categories: ['shoulder_tension', 'upper_back_pain', 'posture'],
-        targetAreas: ['chest', 'shoulders'],
-        equipment: 'doorframe',
-      },
-    ],
+    exerciseIds: ['s2-e1', 's2-e2', 's2-e3', 's2-e4', 's2-e5', 's2-e6'],
   },
   {
     id: 3,
@@ -171,80 +47,7 @@ export const SESSIONS: WorkoutSession[] = [
     time: '12–1pm',
     focus: 'Full-body reset + fat burn',
     color: '#2E7D9F',
-    exercises: [
-      {
-        id: 's3-e1',
-        name: 'Hip Flexor Stretch',
-        duration: 34,
-        type: 'stretch',
-        bilateral: true,
-        switchAt: 17,
-        desc: 'Step right foot forward into a lunge, drop left knee to the floor. Push hips gently forward until you feel the front of your left hip stretch. Hold 15s. Switch legs. Undoes hours of sitting.',
-        contraindications: 'Cushion the back knee; keep the front knee stacked over the ankle.',
-        categories: ['hip_flexors', 'sciatica', 'back_pain', 'lower_back_pain'],
-        targetAreas: ['hips', 'lower_back'],
-        equipment: 'none',
-      },
-      {
-        id: 's3-e2',
-        name: 'Jumping Jacks',
-        duration: 40,
-        reps: '20–25',
-        type: 'work',
-        desc: 'Jump feet apart while raising arms overhead, then together while lowering arms. Keep a light bounce. Spikes heart rate and stretches lats and shoulders simultaneously.',
-        contraindications: 'Swap for low-impact "step jacks" (step side to side) if you have knee, ankle, or hip sensitivity.',
-        categories: ['cardio', 'energizing', 'general_fitness'],
-        targetAreas: ['full_body'],
-        equipment: 'none',
-      },
-      {
-        id: 's3-e3',
-        name: 'Mountain Climbers (Slow)',
-        duration: 40,
-        reps: '10 each side',
-        type: 'work',
-        desc: 'Plank on hands. Slowly drive right knee toward chest, return to plank, then left. Keep hips level — no bouncing or rocking. Core burns, hip flexors engage strongly.',
-        contraindications: 'Keep hips level; raise your hands onto a desk if your wrists bother you.',
-        categories: ['core_strength', 'belly_fat', 'cardio', 'hip_flexors'],
-        targetAreas: ['core', 'hips'],
-        equipment: 'none',
-      },
-      {
-        id: 's3-e4',
-        name: 'Thoracic Extension',
-        duration: 30,
-        type: 'stretch',
-        desc: 'Sit at the front edge of your chair. Interlace hands behind head. Gently extend your upper back over the chair back and look up slightly. Targets mid-back compression directly.',
-        contraindications: 'Extend through the upper back only; stop if it pinches the lower back.',
-        categories: ['back_pain', 'upper_back_pain', 'posture'],
-        targetAreas: ['upper_back'],
-        equipment: 'chair',
-      },
-      {
-        id: 's3-e5',
-        name: 'Wrist & Forearm Stretch',
-        duration: 30,
-        type: 'stretch',
-        bilateral: true,
-        switchAt: 15,
-        desc: 'Extend right arm forward, palm facing up. Pull fingers back with left hand for 10s. Flip palm down and press fingers down for 10s. Switch hands. Essential recovery for coders.',
-        contraindications: 'Stretch gently; stop if you feel sharp pain or numbness.',
-        categories: ['carpal_tunnel', 'wrist_forearm'],
-        targetAreas: ['wrists', 'forearms'],
-        equipment: 'none',
-      },
-      {
-        id: 's3-e6',
-        name: 'Slow Deep Breaths',
-        duration: 20,
-        reps: '3 breaths',
-        type: 'stretch',
-        desc: 'Inhale through nose for 4 counts, hold 2 counts, exhale through mouth for 6 counts. Activates the parasympathetic nervous system. Resets your stress response between calls.',
-        categories: ['breathing', 'general_fitness'],
-        targetAreas: ['full_body'],
-        equipment: 'none',
-      },
-    ],
+    exerciseIds: ['s3-e1', 's3-e2', 's3-e3', 's3-e4', 's3-e5', 's3-e6'],
   },
   {
     id: 4,
@@ -253,76 +56,7 @@ export const SESSIONS: WorkoutSession[] = [
     time: '2–3pm',
     focus: 'Core + chest push',
     color: '#6B3FA0',
-    exercises: [
-      {
-        id: 's4-e1',
-        name: 'Arm Circles',
-        duration: 30,
-        type: 'stretch',
-        desc: 'Extend arms to sides. Make large controlled circles forward 10 times, then backward 10 times. Warms up the shoulder joint and loosens the joint capsule before pushing movements.',
-        categories: ['shoulder_tension', 'shoulder_sculpting', 'arm_sculpting', 'energizing', 'general_fitness'],
-        targetAreas: ['shoulders', 'arms'],
-        equipment: 'none',
-      },
-      {
-        id: 's4-e2',
-        name: 'Pike Push-Ups',
-        duration: 40,
-        reps: '8–12',
-        type: 'work',
-        desc: 'Start in a downward-dog position (inverted V shape). Bend elbows to lower the crown of your head toward the floor, then push back up. Targets upper chest and front delts.',
-        contraindications: 'Skip if you have shoulder pain or feel dizzy with your head below your heart.',
-        categories: ['upper_body', 'upper_body_strength', 'shoulder_sculpting', 'arm_sculpting', 'general_fitness'],
-        targetAreas: ['chest', 'shoulders', 'arms'],
-        equipment: 'none',
-      },
-      {
-        id: 's4-e3',
-        name: 'Standing Oblique Crunches',
-        duration: 40,
-        reps: '15 each side',
-        type: 'work',
-        desc: 'Right hand behind head, left arm down. Crunch right elbow toward right hip, contracting your right side. 15 reps, then switch. Directly targets obliques and love handle area.',
-        contraindications: 'Move within a pain-free range; avoid if you have an acute lower-back injury.',
-        categories: ['core_strength', 'belly_fat'],
-        targetAreas: ['core'],
-        equipment: 'none',
-      },
-      {
-        id: 's4-e4',
-        name: 'Levator Scapulae Stretch',
-        duration: 44,
-        type: 'stretch',
-        bilateral: true,
-        switchAt: 22,
-        desc: 'Turn head 45° to the right, then drop chin toward your right armpit. Hold 20s. Feel the deep stretch in the back of your neck. Switch sides. Kills that tech-neck knot.',
-        contraindications: 'Apply only light pressure; never force the neck.',
-        categories: ['neck_pain', 'shoulder_tension', 'tension_headache'],
-        targetAreas: ['neck', 'shoulders'],
-        equipment: 'none',
-      },
-      {
-        id: 's4-e5',
-        name: 'Rhomboid Stretch',
-        duration: 30,
-        type: 'stretch',
-        desc: 'Hug yourself — right hand on left shoulder, left hand on right. Round your upper back and hold. Feel the stretch between your shoulder blades (rhomboids). Relieves mid-back ache.',
-        categories: ['back_pain', 'upper_back_pain', 'shoulder_tension'],
-        targetAreas: ['upper_back', 'shoulders'],
-        equipment: 'none',
-      },
-      {
-        id: 's4-e6',
-        name: 'Standing Forward Fold',
-        duration: 30,
-        type: 'stretch',
-        desc: 'Feet hip-width. Bend forward from hips and let your head hang heavy. Bend knees slightly if needed. Completely decompresses the spine and releases hamstrings after prolonged sitting.',
-        contraindications: 'Bend your knees and roll up slowly; ease off with acute lower-back pain or if you feel dizzy.',
-        categories: ['back_pain', 'lower_back_pain', 'hip_flexors'],
-        targetAreas: ['lower_back', 'legs', 'hips'],
-        equipment: 'none',
-      },
-    ],
+    exerciseIds: ['s4-e1', 's4-e2', 's4-e3', 's4-e4', 's4-e5', 's4-e6'],
   },
   {
     id: 5,
@@ -331,82 +65,31 @@ export const SESSIONS: WorkoutSession[] = [
     time: '4–5pm',
     focus: 'Decompress + recovery',
     color: '#1A6B45',
-    exercises: [
-      {
-        id: 's5-e1',
-        name: 'Lateral Body Stretch',
-        duration: 34,
-        type: 'stretch',
-        bilateral: true,
-        switchAt: 17,
-        desc: 'Reach both arms overhead and interlace fingers. Lean to the right for 15s, then to the left for 15s. Stretches the side body, obliques, and lats.',
-        categories: ['back_pain', 'shoulder_tension'],
-        targetAreas: ['upper_back', 'core'],
-        equipment: 'none',
-      },
-      {
-        id: 's5-e2',
-        name: 'Wide-Grip Desk Push-Ups',
-        duration: 40,
-        reps: '10–15',
-        type: 'work',
-        desc: 'Hands wider than shoulder-width on desk. Lower chest toward desk, push up. Wide grip emphasizes outer chest and front shoulder. Use a slow 2-second lowering phase for extra burn.',
-        contraindications: 'Use a sturdy desk that won\'t slide or tip.',
-        categories: ['upper_body', 'upper_body_strength', 'chest_sculpting', 'arm_sculpting', 'general_fitness'],
-        targetAreas: ['chest', 'shoulders', 'arms'],
-        equipment: 'desk',
-      },
-      {
-        id: 's5-e3',
-        name: 'Hollow Body Hold',
-        duration: 40,
-        reps: '20s hold',
-        type: 'work',
-        desc: 'Stand tall, press your lower back flat (posterior tilt). Engage every abdominal muscle. Optional: raise arms overhead for a harder challenge. Best static core exercise there is.',
-        contraindications: 'Keep your lower back pressed flat; stop if it arches or aches.',
-        categories: ['core_strength', 'belly_fat'],
-        targetAreas: ['core'],
-        equipment: 'none',
-      },
-      {
-        id: 's5-e4',
-        name: 'Pec Stretch on Wall',
-        duration: 44,
-        type: 'stretch',
-        bilateral: true,
-        switchAt: 22,
-        desc: 'Right palm flat on wall at shoulder height. Slowly rotate your body to the left until you feel a stretch across your right chest. Hold 20s. Switch sides.',
-        contraindications: 'Rotate gently; don\'t force a stretched shoulder.',
-        categories: ['shoulder_tension', 'posture'],
-        targetAreas: ['chest', 'shoulders'],
-        equipment: 'wall',
-      },
-      {
-        id: 's5-e5',
-        name: "Modified Child's Pose",
-        duration: 35,
-        type: 'stretch',
-        desc: 'Both hands flat on desk. Walk feet back until your torso is roughly horizontal. Let your chest drop and head hang between your arms. Full thoracic spine and shoulder decompression.',
-        contraindications: 'Use a stable desk that won\'t slide.',
-        categories: ['back_pain', 'upper_back_pain', 'shoulder_tension'],
-        targetAreas: ['upper_back', 'shoulders'],
-        equipment: 'desk',
-      },
-      {
-        id: 's5-e6',
-        name: 'Cervical Retractions',
-        duration: 25,
-        reps: '8–10 reps',
-        type: 'stretch',
-        desc: 'Stand or sit tall. Gently pull chin straight BACK — not down, straight back. Like making a double chin. Hold 2 seconds, release. Corrects forward head posture from screen use.',
-        contraindications: 'Glide the chin straight back gently; stop if you feel tingling down the arms.',
-        categories: ['neck_pain', 'tension_headache', 'posture'],
-        targetAreas: ['neck'],
-        equipment: 'none',
-      },
-    ],
+    exerciseIds: ['s5-e1', 's5-e2', 's5-e3', 's5-e4', 's5-e5', 's5-e6'],
   },
 ];
+
+/** Resolves a preset's ordered id-list into full library `Exercise` objects. */
+function hydratePreset(preset: SessionPreset): WorkoutSession {
+  const { exerciseIds, ...meta } = preset;
+  const exercises = exerciseIds.map(id => {
+    const exercise = getExerciseById(id);
+    if (!exercise) {
+      throw new Error(
+        `Session "${preset.name}" references unknown exercise id "${id}".`,
+      );
+    }
+    return exercise;
+  });
+  return { ...meta, exercises };
+}
+
+/**
+ * The 5 curated built-in sessions, hydrated from the library. Each session's
+ * `exercises` are the exact library objects (shared by reference), so the library
+ * remains the single source of truth for exercise content.
+ */
+export const SESSIONS: WorkoutSession[] = SESSION_PRESETS.map(hydratePreset);
 
 /**
  * Builds the day's session list of length `count` by cycling the curated
@@ -421,4 +104,9 @@ export function buildDaySessions(count: number): WorkoutSession[] {
     const base = SESSIONS[i % SESSIONS.length];
     return { ...base, id: i, name: `Session ${i + 1}`, time: '' };
   });
+}
+
+/** Built-in sessions whose exercise list contains the given exercise id. */
+export function sessionsContainingExercise(id: string): WorkoutSession[] {
+  return SESSIONS.filter(s => s.exercises.some(e => e.id === id));
 }
