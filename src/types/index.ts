@@ -1,17 +1,38 @@
 export type ExerciseCategory =
+  // Complaint / relief
   | 'back_pain'
+  | 'upper_back_pain'
+  | 'lower_back_pain'
   | 'neck_pain'
   | 'carpal_tunnel'
+  | 'wrist_forearm'
   | 'shoulder_tension'
   | 'hip_flexors'
+  | 'sciatica'
   | 'eye_strain'
-  | 'general_fitness'
+  | 'tension_headache'
+  | 'ankle_circulation'
+  | 'breathing'
+  | 'posture'
+  // Strength
   | 'core_strength'
+  | 'back_strength'
+  | 'upper_body_strength'
+  | 'lower_body_strength'
+  // Sculpting / fat-target
+  | 'chest_sculpting'
+  | 'shoulder_sculpting'
+  | 'arm_sculpting'
+  | 'leg_sculpting'
+  | 'belly_fat'
+  | 'calves'
+  // Wellness / goal
+  | 'general_fitness'
   | 'upper_body'
   | 'lower_body'
   | 'cardio'
-  | 'breathing'
-  | 'posture';
+  | 'balance'
+  | 'energizing';
 
 export type BodyArea =
   | 'neck'
@@ -21,9 +42,14 @@ export type BodyArea =
   | 'core'
   | 'wrists'
   | 'forearms'
+  | 'arms'
   | 'chest'
   | 'hips'
+  | 'glutes'
   | 'legs'
+  | 'calves'
+  | 'ankles'
+  | 'eyes'
   | 'full_body';
 
 export type Equipment = 'none' | 'chair' | 'desk' | 'wall' | 'doorframe';

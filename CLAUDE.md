@@ -140,12 +140,17 @@ The `exerciseLibrary.ts` file exports helper functions (`getExercisesByCategory`
 ### Catalogue & safety groundwork — 🚧 In progress (Phase 1: #26 / #31 / #29)
 - **#31 (shipped in this branch):** `Exercise.contraindications?: string` — optional
   "stop if it hurts" note; render in the library detail and optionally the runner prep card.
-- **#26 plumbing (shipped in this branch):** `STANDALONE_EXERCISES` + de-dup merge into
-  `EXERCISE_LIBRARY` (built-ins win on id collision). Content authoring is #26 *Phase 2*
-  and is **developer-gated** (category approval first) + **human safety review before
-  merge to `main`** — movement instructions are quasi-medical.
+- **#26 (authored in this branch — awaiting human safety review before `main`):**
+  `STANDALONE_EXERCISES` (~56 entries) de-dup-merged into `EXERCISE_LIBRARY` (built-ins win
+  on id collision). The `ExerciseCategory` union grew to **30 categories** (complaint, strength,
+  sculpting/fat-target, wellness) and `BodyArea` gained `arms`/`glutes`/`calves`/`ankles`/`eyes`;
+  `CATEGORY_LABELS` covers every key. Coverage: **85 library exercises, every category ≥3**,
+  each with a work/stretch mix and a `contraindications` note where a movement could aggravate
+  a condition. Category set was **developer-approved** first; content is quasi-medical and needs
+  a **human review before merging to `main`**.
 - **#29 (shipped in this branch):** Jest (`jest-expo` preset) unit-test harness for the
-  pure data/algorithm functions. See the Testing convention below.
+  pure data/algorithm functions, incl. catalogue coverage + content-conformance tests. See the
+  Testing convention below.
 
 ### Feature 5: Quick session generator
 - New screen: `app/quick-session.tsx`

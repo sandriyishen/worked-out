@@ -110,17 +110,38 @@ export function generateQuickSession(
 }
 
 export const CATEGORY_LABELS: Record<ExerciseCategory, string> = {
+  // Complaint / relief
   back_pain: 'Back Pain',
+  upper_back_pain: 'Upper Back Pain',
+  lower_back_pain: 'Lower Back Pain',
   neck_pain: 'Neck Pain',
   carpal_tunnel: 'Carpal Tunnel',
+  wrist_forearm: 'Wrist & Forearm Strain',
   shoulder_tension: 'Shoulder Tension',
   hip_flexors: 'Tight Hips',
+  sciatica: 'Sciatica Relief',
   eye_strain: 'Eye Strain',
-  general_fitness: 'General Fitness',
+  tension_headache: 'Tension Headache',
+  ankle_circulation: 'Ankle & Leg Circulation',
+  breathing: 'Breathing',
+  posture: 'Posture',
+  // Strength
   core_strength: 'Core Strength',
+  back_strength: 'Back Strength',
+  upper_body_strength: 'Upper Body Strength',
+  lower_body_strength: 'Lower Body Strength',
+  // Sculpting / fat-target
+  chest_sculpting: 'Chest Sculpting',
+  shoulder_sculpting: 'Shoulder Sculpting',
+  arm_sculpting: 'Arm Sculpting',
+  leg_sculpting: 'Leg Sculpting',
+  belly_fat: 'Belly Fat',
+  calves: 'Calf Stretches',
+  // Wellness / goal
+  general_fitness: 'General Fitness',
   upper_body: 'Upper Body',
   lower_body: 'Lower Body',
   cardio: 'Cardio',
-  breathing: 'Breathing',
-  posture: 'Posture',
+  balance: 'Balance',
+  energizing: 'Energizing',
 };
