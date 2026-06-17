@@ -128,14 +128,19 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Sticky header section */}
+      {/* Sticky header */}
       <View style={[styles.stickyHeader, { borderBottomColor: Colors.border }]}>
         <Header
           session={accentSession}
           showSettings={showSettings}
           onToggleSettings={() => setShowSettings(s => !s)}
         />
-        {showSettings && (
+      </View>
+
+      {showSettings ? (
+        /* Settings is its own scrollable region so a tall expanded section
+           (e.g. Issues / Focus) stays fully reachable. */
+        <ScrollView style={styles.content} contentContainerStyle={styles.settingsScroll} keyboardShouldPersistTaps="handled">
           <SettingsPanel
             dailyTarget={dailyTarget}
             sessionDurationMinutes={sessionDurationMinutes}
@@ -150,52 +155,54 @@ export default function HomeScreen() {
             onToggleFocus={updateFocusAreas}
             onOpenLibrary={() => router.push('/library')}
           />
-        )}
-      </View>
+        </ScrollView>
+      ) : (
+        <>
+          {/* Tab bar */}
+          <View style={[styles.tabBar, { borderBottomColor: Colors.border }]}>
+            {(['workout', 'calendar'] as Tab[]).map(id => (
+              <TouchableOpacity
+                key={id}
+                onPress={() => setActiveTab(id)}
+                style={[styles.tab, activeTab === id && { borderBottomColor: accentSession.color, borderBottomWidth: 2 }]}
+              >
+                <Text style={[styles.tabText, { color: activeTab === id ? accentSession.color : Colors.textMuted, fontWeight: activeTab === id ? '700' : '400' }]}>
+                  {id === 'workout' ? 'WORKOUT' : 'CALENDAR'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-      {/* Tab bar */}
-      <View style={[styles.tabBar, { borderBottomColor: Colors.border }]}>
-        {(['workout', 'calendar'] as Tab[]).map(id => (
-          <TouchableOpacity
-            key={id}
-            onPress={() => setActiveTab(id)}
-            style={[styles.tab, activeTab === id && { borderBottomColor: accentSession.color, borderBottomWidth: 2 }]}
-          >
-            <Text style={[styles.tabText, { color: activeTab === id ? accentSession.color : Colors.textMuted, fontWeight: activeTab === id ? '700' : '400' }]}>
-              {id === 'workout' ? 'WORKOUT' : 'CALENDAR'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Scrollable content */}
-      <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
-        {activeTab === 'calendar' ? (
-          <CalendarTab
-            calData={calData}
-            dailyTarget={dailyTarget}
-            onToggleDay={toggleDayOff}
-          />
-        ) : (
-          <SessionAccordion
-            sessions={daySessions}
-            expanded={effectiveDayOff ? null : expanded}
-            onToggle={handleToggle}
-            isDayOff={effectiveDayOff}
-            onUnskipToday={unskipToday}
-            expandedExercises={expandedExercises}
-            timer={timer}
-            runCountFor={runCountFor}
-            sessionsDone={todaysRuns.length}
-            dailyTarget={dailyTarget}
-            onNextSession={handleNextSession}
-            onShuffle={shuffle}
-            hasFocusAreas={focusAreas.length > 0}
-            onOpenQuickSession={() => router.push('/quick-session')}
-            onSkipToday={handleSkipToday}
-          />
-        )}
-      </ScrollView>
+          {/* Scrollable content */}
+          <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
+            {activeTab === 'calendar' ? (
+              <CalendarTab
+                calData={calData}
+                dailyTarget={dailyTarget}
+                onToggleDay={toggleDayOff}
+              />
+            ) : (
+              <SessionAccordion
+                sessions={daySessions}
+                expanded={effectiveDayOff ? null : expanded}
+                onToggle={handleToggle}
+                isDayOff={effectiveDayOff}
+                onUnskipToday={unskipToday}
+                expandedExercises={expandedExercises}
+                timer={timer}
+                runCountFor={runCountFor}
+                sessionsDone={todaysRuns.length}
+                dailyTarget={dailyTarget}
+                onNextSession={handleNextSession}
+                onShuffle={shuffle}
+                hasFocusAreas={focusAreas.length > 0}
+                onOpenQuickSession={() => router.push('/quick-session')}
+                onSkipToday={handleSkipToday}
+              />
+            )}
+          </ScrollView>
+        </>
+      )}
     </SafeAreaView>
   );
 }
@@ -228,5 +235,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  settingsScroll: {
+    paddingTop: 12,
+    paddingBottom: 48,
   },
 });
