@@ -115,15 +115,25 @@ Set `JAVA_HOME` to the JDK root if the installer doesn't do it automatically.
 
 ### 3. Android SDK
 
-The exact compile/target API level, Build Tools, and NDK are pinned by the Expo SDK 56 prebuild template, not chosen by hand. Run `npx expo prebuild --platform android` once and read the generated `android/build.gradle` (the `compileSdkVersion`, `buildToolsVersion`, `targetSdkVersion`, and `ndkVersion` values at the top) — those are the versions to install. `npx expo-doctor` will also flag anything missing.
+The exact compile/target API level, Build Tools, and NDK are pinned by the Expo SDK 56 prebuild template, not chosen by hand. Verified from `npx expo prebuild --platform android` (resolved by the `expo-root-project` Gradle plugin; no project-level overrides), the SDK 56 / RN 0.85 values are:
+
+| Setting | Version |
+|---|---|
+| `compileSdkVersion` | 35 |
+| `targetSdkVersion` | 35 |
+| `minSdkVersion` | 24 |
+| `buildToolsVersion` | 35.0.0 |
+| `ndkVersion` | 27.1.12297006 |
+
+To re-confirm after an SDK bump, run `npx expo prebuild --platform android` and read `rootProject.ext` (the app reads these via `android/app/build.gradle`); `npx expo-doctor` will also flag anything missing.
 
 **How to install:**
 
-Option 1 — Android Studio (easiest): Download from https://developer.android.com/studio. The installer handles the SDK Platform, Build Tools, and NDK automatically via the SDK Manager — point it at the versions from `android/build.gradle`.
+Option 1 — Android Studio (easiest): Download from https://developer.android.com/studio. The installer handles the SDK Platform, Build Tools, and NDK automatically via the SDK Manager — select the versions from the table above.
 
-Option 2 — Command-line tools only (no IDE): Download the SDK Command-Line Tools from the same page, then feed the versions from `android/build.gradle` to `sdkmanager`, e.g.:
+Option 2 — Command-line tools only (no IDE): Download the SDK Command-Line Tools from the same page, then feed the versions to `sdkmanager`:
 ```
-sdkmanager "platforms;android-<compileSdk>" "build-tools;<buildToolsVersion>" "ndk;<ndkVersion>"
+sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.1.12297006"
 ```
 
 > Path A (EAS Cloud Build) sidesteps all of this — the build image already has the correct SDK, Build Tools, and NDK for SDK 56 preinstalled.
@@ -258,6 +268,6 @@ A Codespace is a Dev Container hosted by GitHub — nothing installed on your ma
 | EAS CLI | Path A | latest | `npx eas-cli@latest` (no install needed) |
 | Expo account + token | Path A | — | expo.dev → Account Settings → Access Tokens |
 | JDK | Path B | 17 | adoptium.net or Android Studio |
-| Android SDK / Build Tools / NDK | Path B | per `android/build.gradle` (set by SDK 56 prebuild) | Android Studio / sdkmanager |
+| Android SDK / Build Tools / NDK | Path B | compileSdk 35 · targetSdk 35 · minSdk 24 · build-tools 35.0.0 · NDK 27.1.12297006 (SDK 56 prebuild) | Android Studio / sdkmanager |
 | Android Studio | Path B | optional | developer.android.com/studio |
 | Docker Desktop | Option 3 isolation | any | docker.com |
