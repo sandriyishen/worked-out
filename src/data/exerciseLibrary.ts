@@ -78,7 +78,7 @@ const exerciseCost = (e: Exercise) => e.duration + PREP_SECS;
  * - Budget longer than the session → keeps the whole session, then appends
  *   category-matched exercises from the library to fill the remaining time.
  *
- * Cost per exercise mirrors WorkoutTab's `duration + PREP_SECS` total, so the
+ * Cost per exercise mirrors the runner's `duration + PREP_SECS` total, so the
  * resulting list fills (without exceeding) the budget as closely as possible.
  */
 export function fitSessionToBudget(

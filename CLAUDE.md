@@ -61,8 +61,10 @@ src/
   components/
     Header.tsx              # App title + session color accent + Settings button
     SettingsPanel.tsx       # Sessions/day + duration steppers, skip-day chips, equipment chips (#28), day-off toggle
-    SessionTabBar.tsx       # Horizontal scrolling session pill tabs (generic Session 1…N)
-    WorkoutTab.tsx          # Workout view: prep/active/done cards, exercise list, beach rest screen
+    SessionAccordion.tsx    # Workout tab: vertical list of collapsible session rows (#25) +
+                            #   beach rest screen + shared pro tips
+    SessionRow.tsx          # One collapsible session row header: name, total time, today's run count (#25)
+    SessionRunner.tsx       # Expanded-row run controls: prep/active/done cards + start + exercise list
     ExerciseList.tsx        # Expandable exercise cards (no diagrams)
     CalendarTab.tsx         # Monthly calendar grid + stats
 ```
@@ -126,6 +128,20 @@ The `exerciseLibrary.ts` file exports helper functions (`getExercisesByCategory`
   rest weekdays, `skipOverrides` cancel a skip for one date. Off days (manual or skip) replace the
   workout with a beach rest screen + "Un-skip today" (`unskipToday` in `useWorkoutHistory`).
 
+### Session runner redesign: collapsible accordion (#25) — ✅ Implemented
+- The top horizontal session pill bar (`SessionTabBar`) is **gone**. The workout tab is now a
+  **vertical accordion** of collapsible session rows (`SessionAccordion` → `SessionRow` +
+  `SessionRunner`). One row is open at a time (true accordion); the expanded row is the active,
+  timer-bound session.
+- Collapsed `SessionRow` shows the session name, **total time** (budget-fit via
+  `fitSessionToBudget`), and **today's completion count** for that slot (from
+  `DayRecord.sessionRuns`). Expanding resets the single `useWorkoutTimer` and binds it to that
+  session; collapsing / "Next Session" reset it too, so a half-run session never bleeds across rows.
+- `app/index.tsx` tracks `expanded: number | null` (was `activeSession`). The runner body (prep/
+  active/done/start + `ExerciseList`) was extracted from the old `WorkoutTab` into `SessionRunner`;
+  the beach rest screen + pro tips moved into `SessionAccordion`. `SessionTabBar` and `WorkoutTab`
+  were deleted.
+
 ### Feature 2: Exercise customization per session
 - Add `isCustom?: boolean` and an optional `customExercises?: Exercise[]` to `WorkoutSession`
 - Store custom sessions under a new `customSessions` key in `PersistedState`
@@ -133,7 +149,10 @@ The `exerciseLibrary.ts` file exports helper functions (`getExercisesByCategory`
 
 ### Feature 3: Repeat session tracking
 - Already supported at the data layer — `DayRecord.sessionRuns` records each completion
-- UI change: don't mark a session pill as "done" after first completion; instead show a count badge
+- **#25 surfaced part of this:** the collapsed row already shows a per-session "N× today" badge
+  derived from `sessionRuns`. Remaining UI work: a day-progress / calendar model that counts
+  `sessionRuns.length` rather than distinct `completedSessionIds` (today the day goal still counts
+  distinct slots completed)
 - Calendar stats would sum `sessionRuns.length` per day, not `completedSessionIds.size`
 
 ### Feature 4: Exercise library screen — ✅ Implemented

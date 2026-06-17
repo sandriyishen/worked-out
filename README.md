@@ -25,6 +25,7 @@ The goal is to make movement the path of least resistance — something you do i
 
 - **Configurable daily sessions** — choose how many sessions per day (1–10); they're presented as Session 1…N
 - **Per-session duration** — set a time budget (or leave it on Auto) and the exercise list trims or extends to fit
+- **Collapsible session list** — each day's sessions stack as expandable rows showing total time and how many times you've run each one today; tap one to expand its runner
 - **Timed workout runner** with prep countdown, bilateral side-switch cues, pause/resume, and progress bar
 - **Calendar view** showing completion history with done / partial / missed / day-off status
 - **Weekly skip days & Day Off** — pick recurring rest weekdays or mark today off; rest days show a beach screen with one-tap un-skip
@@ -93,8 +94,9 @@ src/
   components/
     Header.tsx
     SettingsPanel.tsx
-    SessionTabBar.tsx
-    WorkoutTab.tsx
+    SessionAccordion.tsx # Collapsible session rows (workout tab) + beach rest screen + tips
+    SessionRow.tsx       # One collapsible session row header (name, total time, runs today)
+    SessionRunner.tsx    # Expanded-row run controls (prep/active/done + exercise list)
     ExerciseList.tsx
     CalendarTab.tsx
 ```
