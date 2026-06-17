@@ -1,7 +1,7 @@
 import { BodyArea, Equipment, ExerciseCategory } from '../../types';
 import { CATEGORY_LABELS, EXERCISE_LIBRARY, getExercisesByCategory } from '../exerciseLibrary';
 import { STANDALONE_EXERCISES } from '../standaloneExercises';
-import { SESSIONS } from '../sessions';
+import { BUILT_IN_EXERCISES } from '../builtInExercises';
 
 const VALID_EQUIPMENT: Equipment[] = ['none', 'chair', 'desk', 'wall', 'doorframe'];
 
@@ -17,9 +17,9 @@ describe('STANDALONE_EXERCISES conformance', () => {
     const ids = STANDALONE_EXERCISES.map(e => e.id);
     expect(new Set(ids).size).toBe(ids.length);
 
-    const sessionIds = new Set(SESSIONS.flatMap(s => s.exercises).map(e => e.id));
+    const builtInIds = new Set(BUILT_IN_EXERCISES.map(e => e.id));
     for (const id of ids) {
-      expect(sessionIds.has(id)).toBe(false);
+      expect(builtInIds.has(id)).toBe(false);
     }
   });
 

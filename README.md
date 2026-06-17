@@ -23,8 +23,10 @@ The goal is to make movement the path of least resistance — something you do i
 
 ## Current Features
 
-- **Configurable daily sessions** — choose how many sessions per day (1–10); they're presented as Session 1…N
-- **Per-session duration** — set a time budget (or leave it on Auto) and the exercise list trims or extends to fit
+- **Personalized session plan** — your day's sessions are generated from the exercise library around your focus areas, equipment, count, and time budget, then kept the same each day so a routine sticks
+- **Shuffle** — bored of the current set? One tap regenerates fresh sessions from your profile
+- **Focus areas** — pick what to target (grouped: complaints, strength, sculpting, wellness) and sessions are built to cover them
+- **Configurable daily sessions** — choose how many sessions per day (1–10) and a per-session time budget (or Auto)
 - **Collapsible session list** — each day's sessions stack as expandable rows showing total time and how many times you've run each one today; tap one to expand its runner
 - **Repeat tracking** — run the same session as many times as you like; every run counts toward your daily total and shows in history (the calendar marks multi-run days)
 - **Timed workout runner** with prep countdown, bilateral side-switch cues, pause/resume, and progress bar
@@ -38,7 +40,7 @@ The goal is to make movement the path of least resistance — something you do i
 ## Planned Features
 
 1. **Exercise customization** — swap or modify individual exercises within any session
-2. **Quick sessions** — specify a complaint and a time budget; the app generates a targeted stretch or workout session on the spot
+2. **Quick session screen** — a dedicated screen to spin up a one-off targeted session for a complaint + time budget (the generator engine already exists)
 
 ---
 
@@ -83,19 +85,20 @@ src/
   theme/index.ts        # Colors and font constants
   storage/index.ts      # AsyncStorage wrapper
   data/
-    builtInExercises.ts # Curated built-in exercise definitions (flat library data)
-    sessions.ts         # Session presets (id-lists) + buildDaySessions() (generic per-day list)
-    exerciseLibrary.ts  # Exercise catalogue (single source of truth) + fitSessionToBudget()
-    ranking.ts          # Pure exercise ranking score (efficacy/ease/popularity/focus)
+    builtInExercises.ts # Original curated exercise definitions (flat library data)
+    exerciseLibrary.ts  # Exercise catalogue (single source of truth) + query helpers
+    ranking.ts          # Pure exercise ranking score + popularity (efficacy/ease/popularity/focus)
+    sessionGenerator.ts # Generates the day's themed sessions from the ranked library (+ quick sessions)
     standaloneExercises.ts # Library-grown exercises, merged into the catalogue
     __tests__/          # Jest unit tests for the data/algorithm layer
   hooks/
     useWorkoutTimer.ts  # Timer state machine
-    useWorkoutHistory.ts # Calendar and completion state
+    useWorkoutHistory.ts # Calendar, completion, and settings state
+    useSessionPlan.ts   # Persisted generated session plan + shuffle
   components/
     Header.tsx
-    SettingsPanel.tsx
-    SessionAccordion.tsx # Collapsible session rows (workout tab) + beach rest screen + tips
+    SettingsPanel.tsx    # Steppers, skip days, equipment + focus-area chips
+    SessionAccordion.tsx # Collapsible session rows (workout tab) + Shuffle + beach rest screen
     SessionRow.tsx       # One collapsible session row header (name, total time, runs today)
     SessionRunner.tsx    # Expanded-row run controls (prep/active/done + exercise list)
     ExerciseList.tsx

@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Equipment } from '../types';
+import { Equipment, ExerciseCategory } from '../types';
+import { CATEGORY_GROUPS, CATEGORY_LABELS } from '../data/exerciseLibrary';
 import { Colors, Fonts } from '../theme';
 
 const WEEKDAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -17,17 +18,19 @@ interface Props {
   sessionDurationMinutes?: number;
   skipDays: number[];
   availableEquipment: Equipment[];
+  focusAreas: ExerciseCategory[];
   isDayOff: boolean;
   sessionColor: string;
   onUpdateTarget: (val: number) => void;
   onUpdateDuration: (val?: number) => void;
   onToggleSkipDay: (day: number) => void;
   onToggleEquipment: (item: Equipment) => void;
+  onToggleFocus: (category: ExerciseCategory) => void;
   onMarkTodayOff: () => void;
   onUnmarkTodayOff: () => void;
 }
 
-export function SettingsPanel({ dailyTarget, sessionDurationMinutes, skipDays, availableEquipment, isDayOff, sessionColor, onUpdateTarget, onUpdateDuration, onToggleSkipDay, onToggleEquipment, onMarkTodayOff, onUnmarkTodayOff }: Props) {
+export function SettingsPanel({ dailyTarget, sessionDurationMinutes, skipDays, availableEquipment, focusAreas, isDayOff, sessionColor, onUpdateTarget, onUpdateDuration, onToggleSkipDay, onToggleEquipment, onToggleFocus, onMarkTodayOff, onUnmarkTodayOff }: Props) {
   return (
     <View style={styles.container}>
       <Text style={styles.label}>SESSIONS PER DAY</Text>
@@ -109,6 +112,33 @@ export function SettingsPanel({ dailyTarget, sessionDurationMinutes, skipDays, a
         })}
       </View>
       <Text style={styles.skipHint}>Used to tailor the exercise library and quick sessions</Text>
+      <View style={styles.divider} />
+      <Text style={styles.label}>MY FOCUS</Text>
+      {CATEGORY_GROUPS.map(group => (
+        <View key={group.label} style={styles.focusGroup}>
+          <Text style={styles.focusGroupLabel}>{group.label}</Text>
+          <View style={styles.focusWrap}>
+            {group.categories.map(cat => {
+              const on = focusAreas.includes(cat);
+              return (
+                <TouchableOpacity
+                  key={`${group.label}-${cat}`}
+                  onPress={() => onToggleFocus(cat)}
+                  style={[
+                    styles.focusChip,
+                    on && { backgroundColor: sessionColor, borderColor: sessionColor },
+                  ]}
+                >
+                  <Text style={[styles.focusChipText, on && styles.skipChipTextOn]}>
+                    {CATEGORY_LABELS[cat]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      ))}
+      <Text style={styles.skipHint}>Your sessions are generated to target these — change them anytime, or shuffle for fresh picks</Text>
       <View style={styles.divider} />
       {!isDayOff ? (
         <TouchableOpacity onPress={onMarkTodayOff} style={styles.dayOffBtn}>
@@ -212,6 +242,34 @@ const styles = StyleSheet.create({
   },
   skipChipTextOn: {
     color: '#000',
+  },
+  focusGroup: {
+    marginBottom: 10,
+  },
+  focusGroupLabel: {
+    fontSize: 9,
+    letterSpacing: 1,
+    color: Colors.textDim,
+    fontFamily: Fonts.mono,
+    marginBottom: 6,
+  },
+  focusWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  focusChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  focusChipText: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    fontFamily: Fonts.mono,
   },
   skipHint: {
     fontSize: 11,

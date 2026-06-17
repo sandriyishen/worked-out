@@ -3,13 +3,12 @@ import { Exercise } from '../types';
 /**
  * Standalone library exercises (feature #26).
  *
- * These exercises are NOT part of the 5 built-in `SESSIONS`; they exist to give
+ * These exercises are not among the original built-in movements; they exist to give
  * every complaint category broad, balanced coverage. They are merged into
- * `EXERCISE_LIBRARY` (see `exerciseLibrary.ts`), which is the single pool the
- * session machinery draws from — so this content is **reachable when building
- * sessions** (`fitSessionToBudget`'s extend path, and the quick-session
- * generator in #5), not library-only. On an id collision a built-in session
- * exercise wins (sessions are concatenated first, then de-duped keep-first).
+ * `EXERCISE_LIBRARY` (see `exerciseLibrary.ts`), the single pool the session
+ * generator and quick sessions draw from — so this content is **reachable when
+ * building sessions**, not library-only. On an id collision a built-in exercise
+ * wins (built-ins are concatenated first, then de-duped keep-first).
  *
  * ── Authoring gate ──────────────────────────────────────────────────────────
  * Content is authored in #26 *Phase 2*, and only AFTER the developer approves

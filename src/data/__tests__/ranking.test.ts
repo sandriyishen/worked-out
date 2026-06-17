@@ -3,10 +3,10 @@ import {
   DEFAULT_RANKING_WEIGHTS,
   effectiveDifficulty,
   effectiveEfficacy,
+  exercisePopularity,
   rankExercises,
   scoreExercise,
 } from '../ranking';
-import { SESSIONS, exercisePopularity } from '../sessions';
 
 function makeExercise(over: Partial<Exercise> = {}): Exercise {
   return {
@@ -89,51 +89,35 @@ describe('exercisePopularity', () => {
     expect(exercisePopularity({}).size).toBe(0);
   });
 
-  it('attributes a session run to its preset exercises and normalises to 1', () => {
-    const slot0 = SESSIONS[0].exercises;
+  it('counts the recorded exerciseIds and normalises the most-completed to 1', () => {
     const calData: CalendarData = {
       '2026-06-17': {
         date: '2026-06-17',
         sessionsCompleted: 2,
         status: 'partial',
         completedSessionIds: [0],
-        // Slot 0 completed twice → its exercises lead the popularity ranking.
         sessionRuns: [
-          { sessionId: 0, completedAt: 1 },
-          { sessionId: 0, completedAt: 2 },
+          { sessionId: 0, completedAt: 1, exerciseIds: ['a', 'b'] },
+          { sessionId: 0, completedAt: 2, exerciseIds: ['a'] }, // 'a' done twice, 'b' once
         ],
       },
     };
     const pop = exercisePopularity(calData);
-    // Every exercise in slot 0's preset is the most popular → 1.
-    slot0.forEach(e => expect(pop.get(e.id)).toBe(1));
-    // An exercise never completed has no entry.
-    const untouched = SESSIONS[1].exercises.find(e => !slot0.some(s => s.id === e.id));
-    if (untouched) expect(pop.get(untouched.id)).toBeUndefined();
+    expect(pop.get('a')).toBe(1);        // most completed → 1
+    expect(pop.get('b')).toBeCloseTo(0.5); // half as often
+    expect(pop.get('never')).toBeUndefined();
   });
 
-  it('normalises relative frequencies across slots', () => {
+  it('ignores legacy runs that carry no exerciseIds', () => {
     const calData: CalendarData = {
       d: {
         date: 'd',
-        sessionsCompleted: 3,
+        sessionsCompleted: 1,
         status: 'partial',
-        completedSessionIds: [0, 1],
-        sessionRuns: [
-          { sessionId: 0, completedAt: 1 },
-          { sessionId: 0, completedAt: 2 },
-          { sessionId: 1, completedAt: 3 },
-        ],
+        completedSessionIds: [0],
+        sessionRuns: [{ sessionId: 0, completedAt: 1 }], // pre-Phase-C run, no ids
       },
     };
-    const pop = exercisePopularity(calData);
-    const slot0Only = SESSIONS[0].exercises.find(
-      e => !SESSIONS[1].exercises.some(s => s.id === e.id),
-    )!;
-    const slot1Only = SESSIONS[1].exercises.find(
-      e => !SESSIONS[0].exercises.some(s => s.id === e.id),
-    )!;
-    expect(pop.get(slot0Only.id)).toBe(1);       // ran twice → max
-    expect(pop.get(slot1Only.id)).toBeCloseTo(0.5); // ran once → half of max
+    expect(exercisePopularity(calData).size).toBe(0);
   });
 });
