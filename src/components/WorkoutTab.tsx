@@ -16,6 +16,7 @@ interface Props {
   activeSession: number;
   totalSessions: number;
   onNextSession: () => void;
+  onUnskipToday: () => void;
 }
 
 export function WorkoutTab({
@@ -28,6 +29,7 @@ export function WorkoutTab({
   activeSession,
   totalSessions,
   onNextSession,
+  onUnskipToday,
 }: Props) {
   const { phase, exIdx, timer: t, paused, showSwitch, exercise, start, reset, togglePause } = timer;
 
@@ -35,6 +37,23 @@ export function WorkoutTab({
   const totalMin = Math.floor(totalSecs / 60);
   const totalSecRem = totalSecs % 60;
   const sessionsDone = completedSessionIds.size;
+
+  // On any rest day (manual or recurring skip) the workout is replaced entirely by a
+  // celebratory beach screen — no sessions, lists, or tips are shown.
+  if (isDayOff) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.beachCard}>
+          <Text style={styles.beachArt}>☀️🌴🏖️🌊</Text>
+          <Text style={styles.beachTitle}>Enjoy your day off</Text>
+          <Text style={styles.beachSubtitle}>Rest is part of the work. See you tomorrow.</Text>
+          <TouchableOpacity onPress={onUnskipToday} style={styles.unskipBtn}>
+            <Text style={styles.unskipBtnText}>Un-skip today</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -45,7 +64,7 @@ export function WorkoutTab({
             <Text style={styles.sessionEmoji}>{session.emoji}</Text>
             <Text style={styles.sessionName}>{session.name}</Text>
             <Text style={[styles.sessionFocus, { color: session.color }]}>
-              {session.time} · {session.focus}
+              {session.time ? `${session.time} · ${session.focus}` : session.focus}
             </Text>
           </View>
           <View style={styles.sessionCardRight}>
@@ -152,21 +171,14 @@ export function WorkoutTab({
         </View>
       )}
 
-      {/* Start button */}
-      {phase === 'idle' && !isDayOff && (
+      {/* Start button (rest days are handled by the early-return beach screen) */}
+      {phase === 'idle' && (
         <TouchableOpacity
           onPress={start}
           style={[styles.startBtn, { backgroundColor: session.color, shadowColor: session.color }]}
         >
           <Text style={styles.startBtnText}>▶ START SESSION</Text>
         </TouchableOpacity>
-      )}
-
-      {phase === 'idle' && isDayOff && (
-        <View style={styles.dayOffCard}>
-          <Text style={styles.dayOffEmoji}>🌴</Text>
-          <Text style={styles.dayOffText}>Today is a rest day. Enjoy it!</Text>
-        </View>
       )}
 
       {/* Exercise list */}
@@ -497,24 +509,47 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Day off
-  dayOffCard: {
+  // Day off — beach rest screen
+  beachCard: {
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: 'rgba(58,58,82,0.2)',
-    borderRadius: 14,
-    marginBottom: 16,
+    paddingVertical: 36,
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(78,205,196,0.10)',
+    borderRadius: 18,
+    marginTop: 8,
     borderWidth: 1,
-    borderColor: 'rgba(100,100,140,0.15)',
+    borderColor: 'rgba(78,205,196,0.35)',
   },
-  dayOffEmoji: {
-    fontSize: 28,
+  beachArt: {
+    fontSize: 52,
+    marginBottom: 14,
+  },
+  beachTitle: {
+    fontSize: 22,
+    color: Colors.text,
+    fontWeight: '700',
+    fontFamily: Fonts.serif,
     marginBottom: 6,
+    textAlign: 'center',
   },
-  dayOffText: {
+  beachSubtitle: {
+    fontSize: 13,
     color: Colors.textMuted,
     fontFamily: Fonts.mono,
-    fontSize: 12,
+    marginBottom: 22,
+    textAlign: 'center',
+  },
+  unskipBtn: {
+    backgroundColor: Colors.stretch,
+    borderRadius: 10,
+    paddingHorizontal: 22,
+    paddingVertical: 10,
+  },
+  unskipBtnText: {
+    color: '#000',
+    fontSize: 13,
+    fontFamily: Fonts.mono,
+    fontWeight: '700',
   },
 
   // Tips
