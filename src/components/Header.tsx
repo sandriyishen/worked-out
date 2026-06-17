@@ -7,9 +7,10 @@ interface Props {
   session: WorkoutSession;
   showSettings: boolean;
   onToggleSettings: () => void;
+  onOpenLibrary: () => void;
 }
 
-export function Header({ session, showSettings, onToggleSettings }: Props) {
+export function Header({ session, showSettings, onToggleSettings, onOpenLibrary }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.row}>
@@ -20,9 +21,14 @@ export function Header({ session, showSettings, onToggleSettings }: Props) {
             <Text style={[styles.titleAccent, { color: session.color }]}>Workout</Text>
           </Text>
         </View>
-        <TouchableOpacity onPress={onToggleSettings} style={[styles.settingsBtn, showSettings && styles.settingsBtnActive]}>
-          <Text style={styles.settingsBtnText}>⚙</Text>
-        </TouchableOpacity>
+        <View style={styles.actions}>
+          <TouchableOpacity onPress={onOpenLibrary} style={styles.settingsBtn} accessibilityLabel="Exercise library">
+            <Text style={styles.settingsBtnText}>📚</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onToggleSettings} style={[styles.settingsBtn, showSettings && styles.settingsBtnActive]}>
+            <Text style={styles.settingsBtnText}>⚙</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -38,6 +44,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 8,
   },
   eyebrow: {
     fontSize: 10,

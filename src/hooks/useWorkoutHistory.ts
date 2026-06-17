@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CalendarData, DayRecord } from '../types';
+import { CalendarData, DayRecord, Equipment } from '../types';
 import { loadState, saveState } from '../storage';
 
 function todayStr(): string {
@@ -12,6 +12,7 @@ export function useWorkoutHistory() {
   const [sessionDurationMinutes, setSessionDurationMinutes] = useState<number | undefined>(undefined);
   const [skipDays, setSkipDays] = useState<number[]>([]);
   const [skipOverrides, setSkipOverrides] = useState<string[]>([]);
+  const [availableEquipment, setAvailableEquipment] = useState<Equipment[]>([]);
   const [completedSessionIds, setCompletedSessionIds] = useState<Set<number>>(new Set());
   const [isDayOff, setIsDayOff] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -25,6 +26,7 @@ export function useWorkoutHistory() {
         setSessionDurationMinutes(state.settings?.sessionDurationMinutes);
         setSkipDays(state.settings?.skipDays ?? []);
         setSkipOverrides(state.settings?.skipOverrides ?? []);
+        setAvailableEquipment(state.settings?.availableEquipment ?? []);
         const td = todayStr();
         const rec = (state.calData ?? {})[td];
         if (rec) {
@@ -42,13 +44,20 @@ export function useWorkoutHistory() {
     duration?: number,
     skip: number[] = skipDays,
     overrides: string[] = skipOverrides,
+    equipment: Equipment[] = availableEquipment,
   ) => {
     await saveState({
       calData: newCal,
-      settings: { dailyTarget: target, sessionDurationMinutes: duration, skipDays: skip, skipOverrides: overrides },
+      settings: {
+        dailyTarget: target,
+        sessionDurationMinutes: duration,
+        skipDays: skip,
+        skipOverrides: overrides,
+        availableEquipment: equipment,
+      },
       version: 3,
     });
-  }, [skipDays, skipOverrides]);
+  }, [skipDays, skipOverrides, availableEquipment]);
 
   const markSessionComplete = useCallback(async (sessionId: number) => {
     setCompletedSessionIds(prev => {
@@ -141,6 +150,14 @@ export function useWorkoutHistory() {
     await persist(calData, dailyTarget, sessionDurationMinutes, next, skipOverrides);
   }, [calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, persist]);
 
+  const updateAvailableEquipment = useCallback(async (item: Equipment) => {
+    const next = availableEquipment.includes(item)
+      ? availableEquipment.filter(e => e !== item)
+      : [...availableEquipment, item];
+    setAvailableEquipment(next);
+    await persist(calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, next);
+  }, [availableEquipment, calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, persist]);
+
   // Today is a rest day if its weekday is a recurring skip day and not overridden for today.
   const isTodaySkipDay = skipDays.includes(new Date().getDay()) && !skipOverrides.includes(todayStr());
 
@@ -165,6 +182,7 @@ export function useWorkoutHistory() {
     sessionDurationMinutes,
     skipDays,
     skipOverrides,
+    availableEquipment,
     isTodaySkipDay,
     completedSessionIds,
     isDayOff,
@@ -176,6 +194,7 @@ export function useWorkoutHistory() {
     updateDailyTarget,
     updateSessionDuration,
     updateSkipDays,
+    updateAvailableEquipment,
     unskipToday,
     todayStr,
   };

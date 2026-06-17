@@ -1,16 +1,28 @@
 import { Exercise, ExerciseCategory, BodyArea, Equipment, WorkoutSession } from '../types';
 import { PREP_SECS, SESSIONS } from './sessions';
+import { STANDALONE_EXERCISES } from './standaloneExercises';
+
+/** Removes duplicate exercises by `id`, keeping the first occurrence. */
+function dedupeById(exercises: Exercise[]): Exercise[] {
+  const seen = new Set<string>();
+  return exercises.filter(e => (seen.has(e.id) ? false : (seen.add(e.id), true)));
+}
 
 /**
- * The exercise library is the single source of truth for all exercises.
+ * The exercise library is the single source of truth for all exercises, and the
+ * pool the session machinery draws from (`fitSessionToBudget`, and the #5 quick
+ * generator) — so library content is reachable when building sessions, not just
+ * in the #4 browser.
  *
- * Current exercises come from the built-in sessions. As the library grows
- * (feature #4), additional exercises can be appended here directly.
- *
- * Feature #5 (quick session generator) will use getExercisesByCategory and
- * generateQuickSession to build targeted sessions on demand.
+ * It combines the exercises curated into the 5 built-in `SESSIONS` with the
+ * `STANDALONE_EXERCISES` added for broad per-complaint coverage (feature #26).
+ * Sessions are listed first so that, on an id collision, the curated built-in
+ * version wins over a standalone entry.
  */
-export const EXERCISE_LIBRARY: Exercise[] = SESSIONS.flatMap(s => s.exercises);
+export const EXERCISE_LIBRARY: Exercise[] = dedupeById([
+  ...SESSIONS.flatMap(s => s.exercises),
+  ...STANDALONE_EXERCISES,
+]);
 
 export function getExercisesByCategory(category: ExerciseCategory): Exercise[] {
   return EXERCISE_LIBRARY.filter(e => e.categories.includes(category));
@@ -26,6 +38,18 @@ export function getExercisesByEquipment(equipment: Equipment): Exercise[] {
 
 export function getExercisesWithNoEquipment(): Exercise[] {
   return getExercisesByEquipment('none');
+}
+
+/**
+ * Filters to exercises doable with the user's available equipment (feature #28).
+ * No-equipment exercises always qualify. An empty `available` list therefore
+ * yields only the no-equipment exercises.
+ */
+export function getExercisesForEquipment(
+  exercises: Exercise[],
+  available: Equipment[],
+): Exercise[] {
+  return exercises.filter(e => e.equipment === 'none' || available.includes(e.equipment));
 }
 
 /** Time a single exercise occupies in a session, including its prep window. */
@@ -98,17 +122,51 @@ export function generateQuickSession(
 }
 
 export const CATEGORY_LABELS: Record<ExerciseCategory, string> = {
+  // Complaint / relief
   back_pain: 'Back Pain',
+  upper_back_pain: 'Upper Back Pain',
+  lower_back_pain: 'Lower Back Pain',
   neck_pain: 'Neck Pain',
   carpal_tunnel: 'Carpal Tunnel',
+  wrist_forearm: 'Wrist & Forearm Strain',
   shoulder_tension: 'Shoulder Tension',
   hip_flexors: 'Tight Hips',
+  sciatica: 'Sciatica Relief',
   eye_strain: 'Eye Strain',
-  general_fitness: 'General Fitness',
+  tension_headache: 'Tension Headache',
+  ankle_circulation: 'Ankle & Leg Circulation',
+  breathing: 'Breathing',
+  posture: 'Posture',
+  // Strength
   core_strength: 'Core Strength',
+  back_strength: 'Back Strength',
+  upper_body_strength: 'Upper Body Strength',
+  lower_body_strength: 'Lower Body Strength',
+  // Sculpting / fat-target
+  chest_sculpting: 'Chest Sculpting',
+  shoulder_sculpting: 'Shoulder Sculpting',
+  arm_sculpting: 'Arm Sculpting',
+  leg_sculpting: 'Leg Sculpting',
+  belly_fat: 'Belly Fat',
+  calves: 'Calf Stretches',
+  // Wellness / goal
+  general_fitness: 'General Fitness',
   upper_body: 'Upper Body',
   lower_body: 'Lower Body',
   cardio: 'Cardio',
-  breathing: 'Breathing',
-  posture: 'Posture',
+  balance: 'Balance',
+  energizing: 'Energizing',
 };
+
+export const EQUIPMENT_LABELS: Record<Equipment, string> = {
+  none: 'No equipment',
+  chair: 'Chair',
+  desk: 'Desk',
+  wall: 'Wall',
+  doorframe: 'Doorframe',
+};
+
+/** Built-in sessions whose exercise list contains the given exercise id. */
+export function sessionsContainingExercise(id: string): WorkoutSession[] {
+  return SESSIONS.filter(s => s.exercises.some(e => e.id === id));
+}

@@ -28,6 +28,8 @@ Every product decision should orbit this idea. If a feature makes the app feel l
 app/                        # Expo Router — each file is a screen
   _layout.tsx               # Root Stack with StatusBar
   index.tsx                 # Main screen: wires state + renders tabs
+  library.tsx               # Exercise library browser (#4): search + type/equipment/category
+                            #   filters, expandable cards w/ areas + contraindications
 
 src/
   types/index.ts            # Single source of truth for all TS types
@@ -37,8 +39,13 @@ src/
   data/
     sessions.ts             # 5 built-in WorkoutSessions (full library metadata each) +
                             #   buildDaySessions(n): generic Session 1…N by cycling built-ins
-    exerciseLibrary.ts      # Flat list of all exercises + query helpers;
+    exerciseLibrary.ts      # EXERCISE_LIBRARY = de-duped(built-in session exercises +
+                            #   STANDALONE_EXERCISES); query helpers;
                             #   fitSessionToBudget() trims/extends a session to a time budget
+    standaloneExercises.ts  # STANDALONE_EXERCISES: library-grown content (#26), merged into
+                            #   EXERCISE_LIBRARY so it's reachable when building sessions (not
+                            #   library-only). Authored in #26 Phase 2 behind a human-review gate
+    __tests__/              # Jest unit tests for the data/algorithm layer (#29)
 
   hooks/
     useWorkoutTimer.ts      # Phase machine: idle → prep → active → done
@@ -48,7 +55,7 @@ src/
 
   components/
     Header.tsx              # App title + session color accent + Settings button
-    SettingsPanel.tsx       # Sessions/day + duration steppers, skip-day chips, day-off toggle
+    SettingsPanel.tsx       # Sessions/day + duration steppers, skip-day chips, equipment chips (#28), day-off toggle
     SessionTabBar.tsx       # Horizontal scrolling session pill tabs (generic Session 1…N)
     WorkoutTab.tsx          # Workout view: prep/active/done cards, exercise list, beach rest screen
     ExerciseList.tsx        # Expandable exercise cards (no diagrams)
@@ -71,6 +78,7 @@ interface Exercise {
   bilateral?: boolean;
   switchAt?: number;
   reps?: string;
+  contraindications?: string;       // optional "stop if it hurts" safety note (#31)
 
   // Library metadata (powers features #4 and #5)
   categories: ExerciseCategory[];   // e.g. ['back_pain', 'carpal_tunnel']
@@ -91,6 +99,7 @@ interface AppSettings {
   sessionDurationMinutes?: number;  // undefined = Auto (full session); else a time budget
   skipDays?: number[];              // recurring rest weekdays, 0=Sun … 6=Sat
   skipOverrides?: string[];         // YYYY-MM-DD dates where a recurring skip is cancelled
+  availableEquipment?: Equipment[]; // equipment the user has (#28); feeds library + quick-session filtering
 }
 ```
 
@@ -122,11 +131,32 @@ The `exerciseLibrary.ts` file exports helper functions (`getExercisesByCategory`
 - UI change: don't mark a session pill as "done" after first completion; instead show a count badge
 - Calendar stats would sum `sessionRuns.length` per day, not `completedSessionIds.size`
 
-### Feature 4: Exercise library screen
-- New Expo Router screen: `app/library.tsx`
-- Read from `EXERCISE_LIBRARY` in `exerciseLibrary.ts`
-- Filter controls: category chips (back pain, neck, carpal tunnel, etc.) + equipment filter
-- Each exercise card links to detail view and has "Add to session" action
+### Feature 4: Exercise library screen — ✅ Implemented
+- `app/library.tsx` — reached from the 📚 button in `Header`; `router.push('/library')`.
+- Reads `EXERCISE_LIBRARY` (de-duped `built-in session exercises + STANDALONE_EXERCISES`;
+  standalone content lives in `data/standaloneExercises.ts`, authored by #26).
+- Filters: free-text search, type (work/stretch), equipment (multi-select, **defaults to the
+  #28 saved profile**; no-equipment exercises always show), and category multi-select from
+  `CATEGORY_LABELS`. Empty state when nothing matches.
+- Expandable cards show type/duration/equipment + category chips; the detail adds target areas,
+  "appears in N built-in sessions" (`sessionsContainingExercise`), and the `contraindications`
+  note (#31) when set.
+- **Deferred:** the "Add to session" action waits on #2 (custom sessions) — not built yet.
+
+### Catalogue & safety groundwork — 🚧 In progress (Phase 1: #26 / #31 / #29)
+- **#31 (shipped in this branch):** `Exercise.contraindications?: string` — optional
+  "stop if it hurts" note; render in the library detail and optionally the runner prep card.
+- **#26 (authored in this branch — awaiting human safety review before `main`):**
+  `STANDALONE_EXERCISES` (~56 entries) de-dup-merged into `EXERCISE_LIBRARY` (built-ins win
+  on id collision). The `ExerciseCategory` union grew to **30 categories** (complaint, strength,
+  sculpting/fat-target, wellness) and `BodyArea` gained `arms`/`glutes`/`calves`/`ankles`/`eyes`;
+  `CATEGORY_LABELS` covers every key. Coverage: **85 library exercises, every category ≥3**,
+  each with a work/stretch mix and a `contraindications` note where a movement could aggravate
+  a condition. Category set was **developer-approved** first; content is quasi-medical and needs
+  a **human review before merging to `main`**.
+- **#29 (shipped in this branch):** Jest (`jest-expo` preset) unit-test harness for the
+  pure data/algorithm functions, incl. catalogue coverage + content-conformance tests. See the
+  Testing convention below.
 
 ### Feature 5: Quick session generator
 - New screen: `app/quick-session.tsx`
@@ -144,6 +174,8 @@ The `exerciseLibrary.ts` file exports helper functions (`getExercisesByCategory`
 - **Relative imports only.** No `@/` path aliases — keeps babel config simple.
 - **StyleSheet.create** for all styles; no inline objects except for dynamic values (session color, progress width).
 - **One hook per concern.** Timer logic in `useWorkoutTimer`, history/persistence in `useWorkoutHistory`. Keep them separate.
+- **Unit tests for pure logic.** Data/algorithm functions (`fitSessionToBudget`, `EXERCISE_LIBRARY` composition, `generateQuickSession`, repeat/status semantics) get Jest tests under `src/**/__tests__/*.test.ts`. Run with `npm test`. `tsc --noEmit` remains the type guardrail; jest globals are enabled via `"types": ["jest"]` in `tsconfig.json`.
+- **AI-authored exercise content needs a human safety review** before merging to `main` (movement cues are quasi-medical). New library content goes in `data/standaloneExercises.ts`.
 - **Keep root docs current.** Any change that alters user-facing behavior, the data model, file structure, build steps, or dependencies must update the affected root Markdown in the *same* change — never as a follow-up. `README.md` (features + project structure), `CLAUDE.md` (architecture, data model, conventions, planned-feature status), and `DEPENDENCIES.md` (build/toolchain versions). When a planned feature ships, move it out of "Planned" in both `README.md` and `CLAUDE.md`.
 - **The philosophy test.** Before adding any feature, ask: does this make it easier to move for 3 minutes right now?
 
@@ -210,6 +242,7 @@ tech-debt) is an item with three custom fields:
 npm install
 npx expo start --android     # run on Android device/emulator
 npx expo start               # open Expo Go QR code
+npm test                     # run the Jest unit-test suite
 ```
 
 ## Building an APK
