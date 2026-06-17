@@ -17,15 +17,13 @@ import {
   EXERCISE_LIBRARY,
 } from '../src/data/exerciseLibrary';
 import { loadState } from '../src/storage';
+import { CategoryGroupPicker } from '../src/components/CategoryGroupPicker';
 import { Colors, Fonts } from '../src/theme';
 
 type TypeFilter = 'all' | 'work' | 'stretch';
 
 const ACCENT = Colors.stretch;
 const EQUIPMENT_KEYS: Equipment[] = ['chair', 'desk', 'wall', 'doorframe'];
-const CATEGORY_KEYS = (Object.keys(CATEGORY_LABELS) as ExerciseCategory[]).sort((a, b) =>
-  CATEGORY_LABELS[a].localeCompare(CATEGORY_LABELS[b]),
-);
 
 function prettyArea(area: BodyArea): string {
   return area.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -123,20 +121,11 @@ export default function LibraryScreen() {
       <Text style={styles.hint}>No-equipment exercises always show. Defaults to your saved equipment.</Text>
 
       <Text style={styles.filterLabel}>COMPLAINT / GOAL</Text>
-      <View style={styles.wrapRow}>
-        {CATEGORY_KEYS.map(c => {
-          const on = selectedCats.has(c);
-          return (
-            <TouchableOpacity
-              key={c}
-              onPress={() => toggleCat(c)}
-              style={[styles.chip, on && { backgroundColor: ACCENT, borderColor: ACCENT }]}
-            >
-              <Text style={[styles.chipText, on && styles.chipTextOn]}>{CATEGORY_LABELS[c]}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <CategoryGroupPicker
+        accent={ACCENT}
+        isSelected={c => selectedCats.has(c)}
+        onSelect={toggleCat}
+      />
       {selectedCats.size > 0 && (
         <TouchableOpacity onPress={() => setSelectedCats(new Set())}>
           <Text style={styles.clearLink}>Clear categories</Text>

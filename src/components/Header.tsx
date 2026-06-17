@@ -7,32 +7,26 @@ interface Props {
   session: WorkoutSession;
   showSettings: boolean;
   onToggleSettings: () => void;
-  onOpenLibrary: () => void;
-  onOpenQuickSession: () => void;
 }
 
-export function Header({ session, showSettings, onToggleSettings, onOpenLibrary, onOpenQuickSession }: Props) {
+export function Header({ session, showSettings, onToggleSettings }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.row}>
-        <View>
+        <View style={styles.titleBlock}>
           <Text style={styles.eyebrow}>DESK ATHLETE</Text>
           <Text style={styles.title}>
             Between-Call{' '}
             <Text style={[styles.titleAccent, { color: session.color }]}>Workout</Text>
           </Text>
         </View>
-        <View style={styles.actions}>
-          <TouchableOpacity onPress={onOpenQuickSession} style={styles.settingsBtn} accessibilityLabel="Quick session">
-            <Text style={styles.settingsBtnText}>⚡</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onOpenLibrary} style={styles.settingsBtn} accessibilityLabel="Exercise library">
-            <Text style={styles.settingsBtnText}>📚</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onToggleSettings} style={[styles.settingsBtn, showSettings && styles.settingsBtnActive]}>
-            <Text style={styles.settingsBtnText}>⚙</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          onPress={onToggleSettings}
+          style={[styles.settingsBtn, showSettings && styles.settingsBtnActive]}
+          accessibilityLabel="Settings"
+        >
+          <Text style={styles.settingsBtnText}>⚙</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -47,11 +41,12 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    gap: 12,
   },
-  actions: {
-    flexDirection: 'row',
-    gap: 8,
+  // Takes the available width so the title never collides with the button.
+  titleBlock: {
+    flex: 1,
   },
   eyebrow: {
     fontSize: 10,
@@ -76,7 +71,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: 8,
-    padding: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   settingsBtnActive: {
     backgroundColor: 'rgba(255,255,255,0.12)',
@@ -84,6 +80,6 @@ const styles = StyleSheet.create({
   settingsBtnText: {
     color: Colors.textMuted,
     fontFamily: Fonts.mono,
-    fontSize: 12,
+    fontSize: 14,
   },
 });
