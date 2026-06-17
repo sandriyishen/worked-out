@@ -35,21 +35,22 @@ src/
   storage/index.ts          # Thin AsyncStorage wrapper (loadState/saveState)
 
   data/
-    sessions.ts             # 5 built-in WorkoutSessions; each exercise has
-                            #   full library metadata (categories, targetAreas, equipment)
+    sessions.ts             # 5 built-in WorkoutSessions (full library metadata each) +
+                            #   buildDaySessions(n): generic Session 1…N by cycling built-ins
     exerciseLibrary.ts      # Flat list of all exercises + query helpers;
-                            #   will power the library browser and quick-session algo
+                            #   fitSessionToBudget() trims/extends a session to a time budget
 
   hooks/
     useWorkoutTimer.ts      # Phase machine: idle → prep → active → done
                             #   Handles bilateral switch cues, pause, reset
-    useWorkoutHistory.ts    # Calendar state, completion tracking, day-off logic
+    useWorkoutHistory.ts    # Calendar state, completion tracking, day-off + weekly
+                            #   skip-day logic (skipDays/skipOverrides, unskipToday)
 
   components/
     Header.tsx              # App title + session color accent + Settings button
-    SettingsPanel.tsx       # Daily target stepper + day-off toggle
-    SessionTabBar.tsx       # Horizontal scrolling session pill tabs
-    WorkoutTab.tsx          # Full workout view: prep/active/done cards + exercise list
+    SettingsPanel.tsx       # Sessions/day + duration steppers, skip-day chips, day-off toggle
+    SessionTabBar.tsx       # Horizontal scrolling session pill tabs (generic Session 1…N)
+    WorkoutTab.tsx          # Workout view: prep/active/done cards, exercise list, beach rest screen
     ExerciseList.tsx        # Expandable exercise cards (no diagrams)
     CalendarTab.tsx         # Monthly calendar grid + stats
 ```
@@ -84,6 +85,13 @@ interface DayRecord {
   completedSessionIds: number[];
   sessionRuns: SessionRun[];        // tracks repeat completions (feature #3)
 }
+
+interface AppSettings {
+  dailyTarget: number;              // sessions per day (1–10); drives the Session 1…N count
+  sessionDurationMinutes?: number;  // undefined = Auto (full session); else a time budget
+  skipDays?: number[];              // recurring rest weekdays, 0=Sun … 6=Sat
+  skipOverrides?: string[];         // YYYY-MM-DD dates where a recurring skip is cancelled
+}
 ```
 
 `SessionRun[]` already stores every individual completion with a timestamp, so feature #3 (repeat tracking) only needs UI work — the data layer is ready.
@@ -94,10 +102,15 @@ The `exerciseLibrary.ts` file exports helper functions (`getExercisesByCategory`
 
 ## Planned Features — Architectural Notes
 
-### Feature 1: Configurable sessions per day / duration
-- `AppSettings.dailyTarget` already exists and is persisted
-- Add `sessionsPerDay: number` and `sessionDurationMinutes: number` to `AppSettings`
-- Session UI would use `sessionDurationMinutes` to filter/truncate the exercise list
+### Feature 1: Configurable sessions per day / duration — ✅ Implemented
+- `AppSettings.dailyTarget` (1–10) now drives **how many** sessions a day has. `buildDaySessions(n)`
+  in `sessions.ts` cycles the built-in sessions into a generic `Session 1…N` list.
+- `AppSettings.sessionDurationMinutes` is a per-session time budget (Auto when unset).
+  `fitSessionToBudget()` in `exerciseLibrary.ts` trims the exercise list to fit, or extends it
+  with category-matched exercises from the library when the budget exceeds the session.
+- **Weekly skip days** were added alongside (beyond the original plan): `skipDays` mark recurring
+  rest weekdays, `skipOverrides` cancel a skip for one date. Off days (manual or skip) replace the
+  workout with a beach rest screen + "Un-skip today" (`unskipToday` in `useWorkoutHistory`).
 
 ### Feature 2: Exercise customization per session
 - Add `isCustom?: boolean` and an optional `customExercises?: Exercise[]` to `WorkoutSession`

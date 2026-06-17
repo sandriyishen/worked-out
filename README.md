@@ -23,21 +23,20 @@ The goal is to make movement the path of least resistance — something you do i
 
 ## Current Features
 
-- **5 daily sessions** targeting morning activation, mid-morning burn, lunch reset, afternoon power, and end-of-day release
+- **Configurable daily sessions** — choose how many sessions per day (1–10); they're presented as Session 1…N
+- **Per-session duration** — set a time budget (or leave it on Auto) and the exercise list trims or extends to fit
 - **Timed workout runner** with prep countdown, bilateral side-switch cues, pause/resume, and progress bar
 - **Calendar view** showing completion history with done / partial / missed / day-off status
-- **Daily target** — configurable number of sessions to count a day as complete
-- **Day Off** — mark today as a rest day without breaking your streak logic
+- **Weekly skip days & Day Off** — pick recurring rest weekdays or mark today off; rest days show a beach screen with one-tap un-skip
 
 ---
 
 ## Planned Features
 
-1. **Configurable sessions** — adjust how many sessions per day and how long each one is
-2. **Exercise customization** — swap or modify individual exercises within any session
-3. **Repeat tracking** — do the same session twice in a day and have both runs counted in history
-4. **Exercise library** — browse the full catalogue of exercises, filtered by complaint (back pain, stiff neck, carpal tunnel relief, etc.) and body area
-5. **Quick sessions** — specify a complaint and a time budget; the app generates a targeted stretch or workout session on the spot
+1. **Exercise customization** — swap or modify individual exercises within any session
+2. **Repeat tracking** — do the same session twice in a day and have both runs counted in history
+3. **Exercise library** — browse the full catalogue of exercises, filtered by complaint (back pain, stiff neck, carpal tunnel relief, etc.) and body area
+4. **Quick sessions** — specify a complaint and a time budget; the app generates a targeted stretch or workout session on the spot
 
 ---
 
@@ -80,8 +79,8 @@ src/
   theme/index.ts        # Colors and font constants
   storage/index.ts      # AsyncStorage wrapper
   data/
-    sessions.ts         # The 5 built-in workout sessions
-    exerciseLibrary.ts  # Full exercise catalogue (powers features 4 & 5)
+    sessions.ts         # Built-in sessions + buildDaySessions() (generic per-day list)
+    exerciseLibrary.ts  # Exercise catalogue + fitSessionToBudget() (duration trim/extend)
   hooks/
     useWorkoutTimer.ts  # Timer state machine
     useWorkoutHistory.ts # Calendar and completion state
