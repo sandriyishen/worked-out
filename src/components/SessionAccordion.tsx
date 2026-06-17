@@ -22,6 +22,8 @@ interface Props {
   onNextSession: () => void;
   onShuffle: () => void;
   hasFocusAreas: boolean;
+  onOpenQuickSession: () => void;
+  onSkipToday: () => void;
 }
 
 const totalSecsOf = (exercises: Exercise[]) =>
@@ -48,6 +50,8 @@ export function SessionAccordion({
   onNextSession,
   onShuffle,
   hasFocusAreas,
+  onOpenQuickSession,
+  onSkipToday,
 }: Props) {
   // On any rest day (manual or recurring skip) the workout is replaced entirely
   // by a celebratory beach screen — no rows or tips are shown.
@@ -77,6 +81,18 @@ export function SessionAccordion({
 
   return (
     <View style={styles.container}>
+      {/* Big, easy-to-hit primary actions, side by side at the very top. */}
+      <View style={styles.actionRow}>
+        <TouchableOpacity onPress={onOpenQuickSession} style={[styles.actionBtn, styles.quickBtn]}>
+          <Text style={styles.actionEmoji}>⚡</Text>
+          <Text style={[styles.actionLabel, { color: Colors.work }]}>Quick Session</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onSkipToday} style={[styles.actionBtn, styles.skipBtn]}>
+          <Text style={styles.actionEmoji}>🌴</Text>
+          <Text style={[styles.actionLabel, { color: Colors.stretch }]}>Skip Today</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.topRow}>
         <Text style={styles.dayProgress}>
           {sessionsDone}/{dailyTarget} sessions done today
@@ -147,6 +163,37 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     paddingBottom: 40,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 14,
+  },
+  actionBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    borderRadius: 16,
+    borderWidth: 1.5,
+  },
+  quickBtn: {
+    backgroundColor: 'rgba(255,107,53,0.12)',
+    borderColor: 'rgba(255,107,53,0.45)',
+  },
+  skipBtn: {
+    backgroundColor: 'rgba(78,205,196,0.10)',
+    borderColor: 'rgba(78,205,196,0.40)',
+  },
+  actionEmoji: {
+    fontSize: 26,
+    marginBottom: 6,
+  },
+  actionLabel: {
+    fontSize: 14,
+    fontFamily: Fonts.mono,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   topRow: {
     flexDirection: 'row',

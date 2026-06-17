@@ -41,7 +41,6 @@ export default function HomeScreen() {
     markSessionComplete,
     toggleDayOff,
     markTodayOff,
-    unmarkTodayOff,
     updateDailyTarget,
     updateSessionDuration,
     updateSkipDays,
@@ -110,6 +109,11 @@ export default function HomeScreen() {
     setExpanded(prev => (prev == null ? null : Math.min(prev + 1, daySessions.length - 1)));
   }, [timer, daySessions.length]);
 
+  const handleSkipToday = useCallback(async () => {
+    await markTodayOff();
+    timer.reset();
+  }, [markTodayOff, timer]);
+
   // Today's runs drive both the per-slot row badge and the day total. With repeat
   // tracking (#3) the day total is the run count, so repeating a session counts.
   const todaysRuns = calData[todayStr()]?.sessionRuns ?? [];
@@ -126,8 +130,6 @@ export default function HomeScreen() {
           session={accentSession}
           showSettings={showSettings}
           onToggleSettings={() => setShowSettings(s => !s)}
-          onOpenLibrary={() => router.push('/library')}
-          onOpenQuickSession={() => router.push('/quick-session')}
         />
         {showSettings && (
           <SettingsPanel
@@ -136,15 +138,13 @@ export default function HomeScreen() {
             skipDays={skipDays}
             availableEquipment={availableEquipment}
             focusAreas={focusAreas}
-            isDayOff={isDayOff}
             sessionColor={accentSession.color}
             onUpdateTarget={updateDailyTarget}
             onUpdateDuration={updateSessionDuration}
             onToggleSkipDay={updateSkipDays}
             onToggleEquipment={updateAvailableEquipment}
             onToggleFocus={updateFocusAreas}
-            onMarkTodayOff={async () => { await markTodayOff(); timer.reset(); }}
-            onUnmarkTodayOff={unmarkTodayOff}
+            onOpenLibrary={() => router.push('/library')}
           />
         )}
       </View>
@@ -187,6 +187,8 @@ export default function HomeScreen() {
             onNextSession={handleNextSession}
             onShuffle={shuffle}
             hasFocusAreas={focusAreas.length > 0}
+            onOpenQuickSession={() => router.push('/quick-session')}
+            onSkipToday={handleSkipToday}
           />
         )}
       </ScrollView>

@@ -28,10 +28,12 @@ Every product decision should orbit this idea. If a feature makes the app feel l
 app/                        # Expo Router — each file is a screen
   _layout.tsx               # Root Stack + WorkoutHistoryProvider (shared state)
   index.tsx                 # Main screen: wires state + renders tabs
-  library.tsx               # Exercise library browser (#4): search + type/equipment/category
-                            #   filters, expandable cards w/ areas + contraindications
+  library.tsx               # Exercise library browser (#4): search + type/equipment filters +
+                            #   complaint/goal filter via CategoryGroupPicker (#46), expandable
+                            #   cards w/ areas + contraindications. Opened from Settings (#46)
   quick-session.tsx         # Quick session (#5): pick a complaint + time → generate & run
-                            #   on the spot (⚡ in Header); records to history via shared context
+                            #   on the spot (⚡ Quick Session button in the workout tab, #46);
+                            #   records to history via shared context
 
 src/
   types/index.ts            # Single source of truth for all TS types
@@ -68,11 +70,19 @@ src/
                             #   regenerate on profile-signature change, shuffle()
 
   components/
-    Header.tsx              # App title + session color accent + Settings button
-    SettingsPanel.tsx       # Sessions/day + duration steppers, skip-day chips, equipment chips
-                            #   (#28), grouped focus-area chips (#38 Phase C), day-off toggle
-    SessionAccordion.tsx    # Workout tab: collapsible session rows (#25) over the generated
-                            #   plan + Shuffle button (#38) + beach rest screen + shared pro tips
+    Header.tsx              # App title + session color accent + Settings (⚙) button only (#46:
+                            #   library moved into Settings, quick session into the workout tab)
+    Collapsible.tsx         # Reusable collapsible section (header + summary + chevron → body),
+                            #   shared by Settings sections and CategoryGroupPicker (#46)
+    CategoryGroupPicker.tsx # Shared issues/goals selector (#46): the big CATEGORY_GROUPS each
+                            #   expand to reveal their category chips; used by Settings + library
+    SettingsPanel.tsx       # "Exercise Setup" — collapsible sections (sessions/day, duration,
+                            #   skip days, equipment (#28), Issues/Focus via CategoryGroupPicker)
+                            #   + a Library button (#46) + a General placeholder. (Skip-today moved
+                            #   to the workout tab; focus chips grouped per #38 Phase C)
+    SessionAccordion.tsx    # Workout tab: big ⚡ Quick Session / 🌴 Skip Today action buttons at top
+                            #   (#46) + day counter + collapsible session rows (#25) over the
+                            #   generated plan + Shuffle button (#38) + beach rest screen + pro tips
     SessionRow.tsx          # One collapsible session row header: name, total time, today's run count (#25)
     SessionRunner.tsx       # Expanded-row run controls: prep/active/done cards + start + exercise list
     ExerciseList.tsx        # Expandable exercise cards (no diagrams)
@@ -177,12 +187,14 @@ signature changes or the user shuffles. The old hand-authored `SESSIONS` are gon
   appends the run count to a day's status glyph on multi-run days (e.g. `✓ 3`).
 
 ### Feature 4: Exercise library screen — ✅ Implemented
-- `app/library.tsx` — reached from the 📚 button in `Header`; `router.push('/library')`.
+- `app/library.tsx` — reached from the **Library button in Settings** (#46);
+  `router.push('/library')`.
 - Reads `EXERCISE_LIBRARY` (de-duped `built-in session exercises + STANDALONE_EXERCISES`;
   standalone content lives in `data/standaloneExercises.ts`, authored by #26).
 - Filters: free-text search, type (work/stretch), equipment (multi-select, **defaults to the
-  #28 saved profile**; no-equipment exercises always show), and category multi-select from
-  `CATEGORY_LABELS`. Empty state when nothing matches.
+  #28 saved profile**; no-equipment exercises always show), and a complaint/goal filter via the
+  shared `CategoryGroupPicker` — big groups that expand to reveal categories (#46), mirroring
+  Settings. Empty state when nothing matches.
 - Expandable cards show type/duration/equipment + category chips; the detail adds target areas
   and the `contraindications` note (#31) when set. (The "appears in N built-in sessions" line was
   removed in #38 Phase C, when the curated sessions went away.)
@@ -207,7 +219,8 @@ signature changes or the user shuffles. The old hand-authored `SESSIONS` are gon
 ### Feature 5: Quick session generator — ✅ Implemented
 - **Engine (#38 Phase C):** `sessionGenerator.generateQuickSession(category, durationMin, popularity?,
   equipment?, seed?)` — the daily generator with N=1, returning budget-fit `Exercise[]`.
-- **Screen (`app/quick-session.tsx`):** reached via the ⚡ button in `Header`. Pick a complaint
+- **Screen (`app/quick-session.tsx`):** reached via the big **⚡ Quick Session** button at the top
+  of the workout tab (#46). Pick a complaint
   (grouped single-select chips) + a time (5 / 10 / 15 min presets + a custom stepper); equipment is
   pulled silently from the #28 profile. "Let's do this!" generates and runs it inline via the
   existing `SessionRunner` (in `quick` mode) + `useWorkoutTimer`; "🔀 New picks" reshuffles (new seed).

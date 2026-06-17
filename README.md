@@ -32,9 +32,11 @@ The goal is to make movement the path of least resistance — something you do i
 - **Repeat tracking** — run the same session as many times as you like; every run counts toward your daily total and shows in history (the calendar marks multi-run days)
 - **Timed workout runner** with prep countdown, bilateral side-switch cues, pause/resume, and progress bar
 - **Calendar view** showing completion history with done / partial / missed / day-off status
-- **Weekly skip days & Day Off** — pick recurring rest weekdays or mark today off; rest days show a beach screen with one-tap un-skip
+- **Big one-handed actions** — Quick Session and Skip Today sit as large side-by-side buttons at the top of the workout tab, easy to reach
+- **Weekly skip days & Day Off** — pick recurring rest weekdays (in Settings) or tap Skip Today; rest days show a beach screen with one-tap un-skip
+- **Organized Settings** — exercise setup is grouped into collapsible sections (sessions/day, duration, skip days, equipment, issues/focus), with a button into the exercise library
 - **Equipment profile** — tell the app what you have (chair, desk, wall, doorframe) to tailor the exercise library and quick sessions
-- **Exercise library** — browse the full catalogue, filter by complaint/goal, equipment, or type, search by name, and see each exercise's target areas and safety notes
+- **Exercise library** — opened from Settings; browse the full catalogue, filter by complaint/goal (groups that expand to reveal categories), equipment, or type, search by name, and see each exercise's target areas and safety notes
 
 ---
 
@@ -98,9 +100,12 @@ src/
     useWorkoutHistory.ts # Calendar, completion, and settings state
     useSessionPlan.ts   # Persisted generated session plan + shuffle
   components/
-    Header.tsx
-    SettingsPanel.tsx    # Steppers, skip days, equipment + focus-area chips
-    SessionAccordion.tsx # Collapsible session rows (workout tab) + Shuffle + beach rest screen
+    Header.tsx           # App title + Settings (⚙) button
+    Collapsible.tsx      # Reusable collapsible section (header + summary + body)
+    CategoryGroupPicker.tsx # Issues/goals selector: groups that expand to reveal categories
+    SettingsPanel.tsx    # Collapsible exercise-setup sections + Library button + General placeholder
+    SessionAccordion.tsx # Quick Session / Skip Today buttons + collapsible session rows (workout
+                         #   tab) + Shuffle + beach rest screen
     SessionRow.tsx       # One collapsible session row header (name, total time, runs today)
     SessionRunner.tsx    # Expanded-row run controls (prep/active/done + exercise list)
     ExerciseList.tsx
