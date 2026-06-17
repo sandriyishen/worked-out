@@ -14,6 +14,8 @@ export function useWorkoutHistory() {
   const [skipOverrides, setSkipOverrides] = useState<string[]>([]);
   const [availableEquipment, setAvailableEquipment] = useState<Equipment[]>([]);
   const [focusAreas, setFocusAreas] = useState<ExerciseCategory[]>([]);
+  const [pinnedExerciseIds, setPinnedExerciseIds] = useState<string[]>([]);
+  const [favoriteExerciseIds, setFavoriteExerciseIds] = useState<string[]>([]);
   const [completedSessionIds, setCompletedSessionIds] = useState<Set<number>>(new Set());
   const [isDayOff, setIsDayOff] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -29,6 +31,8 @@ export function useWorkoutHistory() {
         setSkipOverrides(state.settings?.skipOverrides ?? []);
         setAvailableEquipment(state.settings?.availableEquipment ?? []);
         setFocusAreas(state.settings?.focusAreas ?? []);
+        setPinnedExerciseIds(state.settings?.pinnedExerciseIds ?? []);
+        setFavoriteExerciseIds(state.settings?.favoriteExerciseIds ?? []);
         const td = todayStr();
         const rec = (state.calData ?? {})[td];
         if (rec) {
@@ -48,6 +52,8 @@ export function useWorkoutHistory() {
     overrides: string[] = skipOverrides,
     equipment: Equipment[] = availableEquipment,
     focus: ExerciseCategory[] = focusAreas,
+    pinned: string[] = pinnedExerciseIds,
+    favorites: string[] = favoriteExerciseIds,
   ) => {
     await saveState({
       calData: newCal,
@@ -58,10 +64,12 @@ export function useWorkoutHistory() {
         skipOverrides: overrides,
         availableEquipment: equipment,
         focusAreas: focus,
+        pinnedExerciseIds: pinned,
+        favoriteExerciseIds: favorites,
       },
       version: 3,
     });
-  }, [skipDays, skipOverrides, availableEquipment, focusAreas]);
+  }, [skipDays, skipOverrides, availableEquipment, focusAreas, pinnedExerciseIds, favoriteExerciseIds]);
 
   const markSessionComplete = useCallback(async (sessionId: number, exerciseIds: string[] = []) => {
     const td = todayStr();
@@ -175,6 +183,25 @@ export function useWorkoutHistory() {
     await persist(calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, availableEquipment, next);
   }, [focusAreas, calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, availableEquipment, persist]);
 
+  // Pin/unpin an exercise (#2). Pinned ids feed the generator (and its signature),
+  // so toggling refreshes the plan to guarantee the exercise's inclusion.
+  const togglePin = useCallback(async (id: string) => {
+    const next = pinnedExerciseIds.includes(id)
+      ? pinnedExerciseIds.filter(x => x !== id)
+      : [...pinnedExerciseIds, id];
+    setPinnedExerciseIds(next);
+    await persist(calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, availableEquipment, focusAreas, next);
+  }, [pinnedExerciseIds, calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, availableEquipment, focusAreas, persist]);
+
+  // Favorite/unfavorite an exercise (#2): a bookmark + soft ranking boost (see ranking.ts).
+  const toggleFavorite = useCallback(async (id: string) => {
+    const next = favoriteExerciseIds.includes(id)
+      ? favoriteExerciseIds.filter(x => x !== id)
+      : [...favoriteExerciseIds, id];
+    setFavoriteExerciseIds(next);
+    await persist(calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, availableEquipment, focusAreas, pinnedExerciseIds, next);
+  }, [favoriteExerciseIds, pinnedExerciseIds, calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, availableEquipment, focusAreas, persist]);
+
   // Today is a rest day if its weekday is a recurring skip day and not overridden for today.
   const isTodaySkipDay = skipDays.includes(new Date().getDay()) && !skipOverrides.includes(todayStr());
 
@@ -201,11 +228,15 @@ export function useWorkoutHistory() {
     skipOverrides,
     availableEquipment,
     focusAreas,
+    pinnedExerciseIds,
+    favoriteExerciseIds,
     isTodaySkipDay,
     completedSessionIds,
     isDayOff,
     loaded,
     markSessionComplete,
+    togglePin,
+    toggleFavorite,
     toggleDayOff,
     markTodayOff,
     unmarkTodayOff,
