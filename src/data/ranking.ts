@@ -24,14 +24,22 @@ export interface RankingWeights {
   ease: number;
   popularity: number;
   focus: number;
-}
+  /**
+   * Soft boost added when an exercise is favorited (#2). Applied *on top* of the
+   * 0–1 base — the four core weights still sum to 1, so a favorited exercise can
+   * score above 1. Favoriting nudges an exercise to show up more often without the
+   * hard guarantee that pinning gives.
+   */
+  favorite: number;
+};
 
-/** Neutral default weights (sum to 1, so a score lands in 0–1). Tunable. */
+/** Neutral default weights (the four core signals sum to 1; favorite is an additive bonus). Tunable. */
 export const DEFAULT_RANKING_WEIGHTS: RankingWeights = {
   efficacy: 0.35,
   ease: 0.15,
   popularity: 0.2,
   focus: 0.3,
+  favorite: 0.15,
 };
 
 /** Neutral efficacy used when an exercise carries no editorial rating. */
@@ -56,6 +64,8 @@ export interface ScoreContext {
   focusAreas?: ExerciseCategory[];
   /** Normalised popularity per exercise id (0–1); see `exercisePopularity` in sessions.ts. */
   popularity?: Map<string, number>;
+  /** Favorited exercise ids (#2): each gets the additive `favorite` boost. */
+  favoriteIds?: Set<string>;
   /** Override the default weights. */
   weights?: RankingWeights;
 }
@@ -72,11 +82,13 @@ export function scoreExercise(ex: Exercise, ctx: ScoreContext = {}): number {
         ? 1
         : 0
       : 0;
+  const favorite = ctx.favoriteIds?.has(ex.id) ? w.favorite : 0;
   return (
     w.efficacy * efficacy +
     w.ease * ease +
     w.popularity * popularity +
-    w.focus * focusMatch
+    w.focus * focusMatch +
+    favorite
   );
 }
 

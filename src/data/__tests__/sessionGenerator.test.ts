@@ -85,6 +85,23 @@ describe('generateDayPlan', () => {
     const b = generateDayPlan(baseProfile, NO_POP, 2).flatMap(s => s.exerciseIds).join(',');
     expect(a).not.toBe(b);
   });
+
+  describe('pinning (#2)', () => {
+    it('guarantees a pinned exercise appears once, bypassing the equipment filter', () => {
+      // s1-e2 (Desk Push-Ups) needs a desk; with no equipment it is normally filtered out.
+      const plan = generateDayPlan({ ...baseProfile, pinnedExerciseIds: ['s1-e2'] }, NO_POP, 1);
+      const allIds = plan.flatMap(s => s.exerciseIds);
+      expect(allIds).toContain('s1-e2');
+      expect(allIds.filter(id => id === 's1-e2')).toHaveLength(1); // no duplicate across the day
+    });
+
+    it('keeps the pinned exercise across a shuffle (new seed)', () => {
+      const withPin = (seed: number) =>
+        generateDayPlan({ ...baseProfile, pinnedExerciseIds: ['s1-e2'] }, NO_POP, seed).flatMap(s => s.exerciseIds);
+      expect(withPin(1)).toContain('s1-e2');
+      expect(withPin(2)).toContain('s1-e2');
+    });
+  });
 });
 
 describe('planSignature', () => {
@@ -95,6 +112,8 @@ describe('planSignature', () => {
     expect(planSignature({ ...baseProfile, availableEquipment: ['chair'] })).not.toBe(p);
     expect(planSignature({ ...baseProfile, dailyTarget: 5 })).not.toBe(p);
     expect(planSignature({ ...baseProfile, durationMinutes: 3 })).not.toBe(p);
+    expect(planSignature({ ...baseProfile, pinnedExerciseIds: ['s1-e1'] })).not.toBe(p);
+    expect(planSignature({ ...baseProfile, favoriteExerciseIds: ['s1-e1'] })).not.toBe(p);
   });
 
   it('ignores ordering of focus areas / equipment', () => {
