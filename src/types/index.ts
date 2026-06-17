@@ -74,6 +74,8 @@ export interface CalendarData {
 export interface AppSettings {
   dailyTarget: number;
   sessionDurationMinutes?: number; // undefined = Auto (full session, current behavior)
+  skipDays?: number[];             // recurring rest weekdays, 0=Sun … 6=Sat (Date.getDay())
+  skipOverrides?: string[];        // YYYY-MM-DD dates where a recurring skip is cancelled
 }
 
 export interface PersistedState {

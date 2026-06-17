@@ -15,19 +15,18 @@ touch soft up close.
 
 ## Regenerating
 
-`make-icon.ps1` decodes the source (via Windows WIC, which reads WebP), center-crops a
-square, scales to the target size, and writes a PNG. Run from this folder:
+`make-icon.ps1` is self-contained: it decodes the source (via Windows WIC, which reads
+WebP), takes a pure square crop, scales it to 1024×1024, writes `icon.png`, and copies that
+to `adaptive-icon.png` and `splash-icon.png`. The crop is baked into the script. Run from
+this folder:
 
 ```powershell
-# Square app icon (full-bleed) — used for icon.png and adaptive-icon.png
-.\make-icon.ps1 -Src .\anime-thumbsup-medium.webp -OutPath ..\icon.png         -CropX 144 -CropY 0 -CropW 384 -CropH 384 -Size 1024
-Copy-Item ..\icon.png ..\adaptive-icon.png -Force
-Copy-Item ..\icon.png ..\splash-icon.png   -Force
+.\make-icon.ps1
 ```
 
-The crop `144,0 384×384` is the centered square of the 672×384 source — keeps the face,
-grin, and thumbs-up in frame and trims the side background. Adjust `-CropX` to pan
-left/right, or shrink `-CropW`/`-CropH` (and re-center `-CropX`) to zoom in tighter.
+The crop is `128,0 384×384` — the largest full-height square of the 672×384 source, panned
+slightly left of centre so the whole thumbs-up hand stays in frame. To re-frame, edit the
+`$CropX`/`$CropY`/`$CropW`/`$CropH` constants at the top of the script.
 
-Optional flags for a padded variant on a solid background (e.g. a safer Android
-foreground): `-Pad 0.7 -Bg "#0C7BC4"` scales the crop to 70% and centers it on the color.
+Note: the source art has her hair running to the very top edge (y=0), so a crop can't add
+headroom above it — that would require a higher / wider-framed source image.
