@@ -37,15 +37,15 @@ The goal is to make movement the path of least resistance — something you do i
 - **Weekly skip days & Day Off** — pick recurring rest weekdays (in Settings) or tap Skip Today; rest days show a beach screen with one-tap un-skip
 - **Organized Settings** — exercise setup is grouped into collapsible sections (sessions/day, duration, skip days, equipment, issues/focus), with a button into the exercise library
 - **Equipment profile** — tell the app what you have (chair, desk, wall, doorframe) to tailor the exercise library and quick sessions
-- **Exercise library** — opened from Settings; browse the full catalogue, filter by complaint/goal (groups that expand to reveal categories), equipment, or type, search by name, and see each exercise's target areas and safety notes
+- **Exercise library** — opened from Settings; browse the full catalogue, filter by complaint/goal (groups that expand to reveal categories), equipment, or type, search by name, and see each exercise's target areas, safety notes, and how many times you've completed it
 
 ---
 
 ## Planned Features
 
-1. **Build a custom session from scratch** — assemble your own session from the library
-2. **First-run onboarding** — a quick guided setup on first launch
-3. **Opt-in gentle movement reminders** — nudges to take a 3-minute break
+1. **First-run onboarding** — a quick guided setup on first launch
+2. **Opt-in gentle movement reminders** — nudges to take a 3-minute break
+3. **Ranking tuning** — author per-exercise efficacy/difficulty and tune the generator's weights
 
 ---
 

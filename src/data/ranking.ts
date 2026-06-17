@@ -104,15 +104,14 @@ export function rankExercises(exercises: Exercise[], ctx: ScoreContext = {}): Ex
 }
 
 /**
- * Derives a normalised (0–1) popularity per exercise id from completion history —
- * the popularity signal `scoreExercise` consumes, and the data #27's per-exercise
- * counter needs. Reads the exact `SessionRun.exerciseIds` recorded at completion
- * (#38 Phase C); runs from before Phase C carry no ids and are skipped. The
- * most-completed exercise scores 1; an empty history yields an empty map.
+ * Raw all-time completion count per exercise id, derived from history (#27). Reads
+ * the exact `SessionRun.exerciseIds` recorded at completion (#38 Phase C); runs from
+ * before Phase C carry no ids and are skipped. This is the per-exercise counter the
+ * library card shows, and the basis for the normalised popularity signal below.
  *
  * Pure (depends only on `types`), so it stays in this cycle-free module.
  */
-export function exercisePopularity(calData: CalendarData): Map<string, number> {
+export function exerciseCompletionCounts(calData: CalendarData): Map<string, number> {
   const counts = new Map<string, number>();
   for (const day of Object.values(calData)) {
     for (const run of day.sessionRuns ?? []) {
@@ -121,6 +120,16 @@ export function exercisePopularity(calData: CalendarData): Map<string, number> {
       }
     }
   }
+  return counts;
+}
+
+/**
+ * Derives a normalised (0–1) popularity per exercise id from completion history —
+ * the popularity signal `scoreExercise` consumes. The most-completed exercise scores
+ * 1; an empty history yields an empty map.
+ */
+export function exercisePopularity(calData: CalendarData): Map<string, number> {
+  const counts = exerciseCompletionCounts(calData);
   const max = Math.max(0, ...counts.values());
   if (max === 0) return new Map();
   const popularity = new Map<string, number>();

@@ -53,7 +53,8 @@ src/
                             #   planSignature(); generateQuickSession() (#5 core)
     ranking.ts              # Pure exercise ranking score (#38 Phase B): efficacy + ease +
                             #   popularity + focus-match (+ additive favorite boost, #2), tunable
-                            #   weights; exercisePopularity() (from SessionRun.exerciseIds — also #27)
+                            #   weights; exerciseCompletionCounts() (#27, per-exercise tallies from
+                            #   SessionRun.exerciseIds) + exercisePopularity() (normalised from it)
     exerciseLibrary.ts      # EXERCISE_LIBRARY = de-duped(BUILT_IN_EXERCISES +
                             #   STANDALONE_EXERCISES) — single source of truth; owns PREP_SECS;
                             #   getExerciseById(); query helpers; CATEGORY_LABELS / CATEGORY_GROUPS
@@ -225,6 +226,9 @@ exercises**, which fits the generated-plan model cleanly. This merges #33.
   removed in #38 Phase C, when the curated sessions went away.)
 - Each card carries the shared `ExerciseToggles` (★ favorite + 📌 pin) and badges, plus a
   "Favorites only" filter (#2); the screen consumes the shared `WorkoutHistoryContext`.
+- Each card shows an all-time **"✓ N× done"** counter (#27) derived from history via
+  `exerciseCompletionCounts(calData)` (counts `SessionRun.exerciseIds`); updates live as
+  sessions containing the exercise are completed.
 
 ### Catalogue & safety groundwork — 🚧 In progress (Phase 1: #26 / #31 / #29)
 - **#31 (shipped in this branch):** `Exercise.contraindications?: string` — optional
