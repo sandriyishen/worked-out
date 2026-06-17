@@ -23,6 +23,7 @@ The goal is to make movement the path of least resistance — something you do i
 
 ## Current Features
 
+- **Quick session** — "my neck hurts, I've got 5 minutes": pick a complaint and a time (5/10/15 min or custom) and get a ready-to-run session generated on the spot
 - **Personalized session plan** — your day's sessions are generated from the exercise library around your focus areas, equipment, count, and time budget, then kept the same each day so a routine sticks
 - **Shuffle** — bored of the current set? One tap regenerates fresh sessions from your profile
 - **Focus areas** — pick what to target (grouped: complaints, strength, sculpting, wellness) and sessions are built to cover them
@@ -40,7 +41,6 @@ The goal is to make movement the path of least resistance — something you do i
 ## Planned Features
 
 1. **Exercise customization** — swap or modify individual exercises within any session
-2. **Quick session screen** — a dedicated screen to spin up a one-off targeted session for a complaint + time budget (the generator engine already exists)
 
 ---
 
@@ -80,10 +80,12 @@ app/                    # Expo Router screens
   _layout.tsx           # Root stack layout
   index.tsx             # Main workout screen
   library.tsx           # Exercise library browser (filters + search + detail)
+  quick-session.tsx     # Quick session: pick a complaint + time, generate & run on the spot
 src/
   types/index.ts        # All TypeScript interfaces
   theme/index.ts        # Colors and font constants
   storage/index.ts      # AsyncStorage wrapper
+  state/                # WorkoutHistoryContext — shared history/settings across screens
   data/
     builtInExercises.ts # Original curated exercise definitions (flat library data)
     exerciseLibrary.ts  # Exercise catalogue (single source of truth) + query helpers

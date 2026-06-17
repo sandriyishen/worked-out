@@ -9,28 +9,33 @@ interface Props {
   session: WorkoutSession;
   exercises: Exercise[];
   timer: WorkoutTimerAPI;
-  sessionsDone: number;
-  dailyTarget: number;
-  activeSession: number;
-  totalSessions: number;
-  onNextSession: () => void;
+  // Daily-plan context (omitted for quick sessions, #5):
+  sessionsDone?: number;
+  dailyTarget?: number;
+  activeSession?: number;
+  totalSessions?: number;
+  onNextSession?: () => void;
+  // Quick-session mode (#5): simpler done card with an exit instead of "Next".
+  quick?: boolean;
+  onExit?: () => void;
 }
 
 /**
- * The run controls for a single expanded session: prep / active / done cards,
- * the start button, and the exercise list. Lives inside an expanded `SessionRow`
- * (the accordion body, #25). The session header, day-off rest screen, and pro
- * tips live in the row header / `SessionAccordion`, not here.
+ * The run controls for a single session: prep / active / done cards, the start
+ * button, and the exercise list. Used both inside an expanded `SessionRow` (the
+ * accordion body, #25) and standalone on the quick-session screen (#5, `quick`).
  */
 export function SessionRunner({
   session,
   exercises,
   timer,
-  sessionsDone,
-  dailyTarget,
-  activeSession,
-  totalSessions,
+  sessionsDone = 0,
+  dailyTarget = 0,
+  activeSession = 0,
+  totalSessions = 1,
   onNextSession,
+  quick = false,
+  onExit,
 }: Props) {
   const { phase, exIdx, timer: t, paused, showSwitch, exercise, start, reset, togglePause } = timer;
 
@@ -115,19 +120,26 @@ export function SessionRunner({
       {phase === 'done' && (
         <View style={styles.doneCard}>
           <Text style={styles.doneEmoji}>✅</Text>
-          <Text style={styles.doneTitle}>Session Complete!</Text>
+          <Text style={styles.doneTitle}>{quick ? 'Quick Session Done!' : 'Session Complete!'}</Text>
           <Text style={styles.doneSubtitle}>
-            {sessionsDone}/{dailyTarget} sessions today
-            {sessionsDone >= dailyTarget ? ' — Day Complete! 🎉' : ''}
+            {quick
+              ? 'Nice — that counts. Logged to your history.'
+              : `${sessionsDone}/${dailyTarget} sessions today${sessionsDone >= dailyTarget ? ' — Day Complete! 🎉' : ''}`}
           </Text>
           <View style={styles.doneButtons}>
             <TouchableOpacity onPress={reset} style={styles.resetBtn}>
               <Text style={styles.resetBtnText}>↩ Again</Text>
             </TouchableOpacity>
-            {activeSession < totalSessions - 1 && (
-              <TouchableOpacity onPress={onNextSession} style={styles.nextBtn}>
-                <Text style={styles.nextBtnText}>Next Session →</Text>
+            {quick ? (
+              <TouchableOpacity onPress={onExit} style={styles.nextBtn}>
+                <Text style={styles.nextBtnText}>Done</Text>
               </TouchableOpacity>
+            ) : (
+              activeSession < totalSessions - 1 && (
+                <TouchableOpacity onPress={onNextSession} style={styles.nextBtn}>
+                  <Text style={styles.nextBtnText}>Next Session →</Text>
+                </TouchableOpacity>
+              )
             )}
           </View>
         </View>

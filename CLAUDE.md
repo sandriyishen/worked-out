@@ -26,15 +26,20 @@ Every product decision should orbit this idea. If a feature makes the app feel l
 
 ```
 app/                        # Expo Router — each file is a screen
-  _layout.tsx               # Root Stack with StatusBar
+  _layout.tsx               # Root Stack + WorkoutHistoryProvider (shared state)
   index.tsx                 # Main screen: wires state + renders tabs
   library.tsx               # Exercise library browser (#4): search + type/equipment/category
                             #   filters, expandable cards w/ areas + contraindications
+  quick-session.tsx         # Quick session (#5): pick a complaint + time → generate & run
+                            #   on the spot (⚡ in Header); records to history via shared context
 
 src/
   types/index.ts            # Single source of truth for all TS types
   theme/index.ts            # Colors, font families as constants
-  storage/index.ts          # Thin AsyncStorage wrapper (loadState/saveState)
+  storage/index.ts          # Thin AsyncStorage wrapper (loadState/saveState/loadPlan/savePlan)
+  state/
+    WorkoutHistoryContext.tsx # Shares one useWorkoutHistory instance app-wide so the main +
+                            #   quick-session screens read/write the same calendar/settings live
 
   data/
     builtInExercises.ts     # BUILT_IN_EXERCISES: the 30 original curated exercise defs (flat
@@ -198,11 +203,17 @@ signature changes or the user shuffles. The old hand-authored `SESSIONS` are gon
   pure data/algorithm functions, incl. catalogue coverage + content-conformance tests. See the
   Testing convention below.
 
-### Feature 5: Quick session generator — 🚧 Engine done (screen pending)
-- **Engine implemented (#38 Phase C):** `sessionGenerator.generateQuickSession(category, durationMin,
-  popularity?, equipment?, seed?)` is the daily generator with N=1 — the single shared selection core
-  the epic called for. It returns budget-fit `Exercise[]`, ready to run via `useWorkoutTimer`.
-- **Still to build:** the `app/quick-session.tsx` screen (complaint + duration inputs → run the result).
+### Feature 5: Quick session generator — ✅ Implemented
+- **Engine (#38 Phase C):** `sessionGenerator.generateQuickSession(category, durationMin, popularity?,
+  equipment?, seed?)` — the daily generator with N=1, returning budget-fit `Exercise[]`.
+- **Screen (`app/quick-session.tsx`):** reached via the ⚡ button in `Header`. Pick a complaint
+  (grouped single-select chips) + a time (5 / 10 / 15 min presets + a custom stepper); equipment is
+  pulled silently from the #28 profile. "Let's do this!" generates and runs it inline via the
+  existing `SessionRunner` (in `quick` mode) + `useWorkoutTimer`; "🔀 New picks" reshuffles (new seed).
+- **History:** completion calls `markSessionComplete(-1, exerciseIds)` — a sentinel slot id, so it
+  lands in `sessionRuns`/calendar and feeds popularity (#3/#38) without matching any plan-row badge.
+- **Shared state:** the screen reads/writes the **same** `useWorkoutHistory` via
+  `WorkoutHistoryContext`, so a completed quick session shows live on the main screen's calendar.
 
 ### Epic #38: Generate daily sessions from the unified library (ranking + coverage)
 - **Phase A — invert data ownership (✅ shipped, behavior-preserving):** exercise definitions
@@ -239,7 +250,7 @@ signature changes or the user shuffles. The old hand-authored `SESSIONS` are gon
 - **No accounts, no cloud.** All data lives in `AsyncStorage`. Keep it that way unless the user explicitly requests sync.
 - **Relative imports only.** No `@/` path aliases — keeps babel config simple.
 - **StyleSheet.create** for all styles; no inline objects except for dynamic values (session color, progress width).
-- **One hook per concern.** Timer logic in `useWorkoutTimer`, history/persistence in `useWorkoutHistory`. Keep them separate.
+- **One hook per concern.** Timer logic in `useWorkoutTimer`, history/persistence in `useWorkoutHistory`, the generated plan in `useSessionPlan`. Keep them separate. `useWorkoutHistory` is shared app-wide through `WorkoutHistoryContext` (provided in `_layout.tsx`) so multiple screens stay in sync — consume it via `useWorkoutHistoryContext()`, don't call the hook twice.
 - **Unit tests for pure logic.** Data/algorithm functions (the session generator + `planSignature`, `EXERCISE_LIBRARY` composition, ranking/`exercisePopularity`, catalogue coverage) get Jest tests under `src/**/__tests__/*.test.ts`. Run with `npm test`. `tsc --noEmit` remains the type guardrail; jest globals are enabled via `"types": ["jest"]` in `tsconfig.json`.
 - **AI-authored exercise content needs a human safety review** before merging to `main` (movement cues are quasi-medical). New library content goes in `data/standaloneExercises.ts`.
 - **Keep root docs current.** Any change that alters user-facing behavior, the data model, file structure, build steps, or dependencies must update the affected root Markdown in the *same* change — never as a follow-up. `README.md` (features + project structure), `CLAUDE.md` (architecture, data model, conventions, planned-feature status), and `DEPENDENCIES.md` (build/toolchain versions). When a planned feature ships, move it out of "Planned" in both `README.md` and `CLAUDE.md`.
