@@ -17,12 +17,15 @@ import {
   EXERCISE_LIBRARY,
 } from '../src/data/exerciseLibrary';
 import { loadState } from '../src/storage';
+import { useWorkoutHistoryContext } from '../src/state/WorkoutHistoryContext';
 import { CategoryGroupPicker } from '../src/components/CategoryGroupPicker';
+import { ExerciseToggles } from '../src/components/ExerciseToggles';
 import { Colors, Fonts } from '../src/theme';
 
 type TypeFilter = 'all' | 'work' | 'stretch';
 
 const ACCENT = Colors.stretch;
+const FAVORITE_COLOR = '#F2C14E';
 const EQUIPMENT_KEYS: Equipment[] = ['chair', 'desk', 'wall', 'doorframe'];
 
 function prettyArea(area: BodyArea): string {
@@ -31,12 +34,17 @@ function prettyArea(area: BodyArea): string {
 
 export default function LibraryScreen() {
   const router = useRouter();
+  const { pinnedExerciseIds, favoriteExerciseIds, togglePin, toggleFavorite } = useWorkoutHistoryContext();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [selectedCats, setSelectedCats] = useState<Set<ExerciseCategory>>(new Set());
   // Equipment the user owns is always allowed; these chips add optional extra gear.
   const [selectedEquip, setSelectedEquip] = useState<Set<Equipment>>(new Set(EQUIPMENT_KEYS));
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const pinnedSet = useMemo(() => new Set(pinnedExerciseIds), [pinnedExerciseIds]);
+  const favoriteSet = useMemo(() => new Set(favoriteExerciseIds), [favoriteExerciseIds]);
 
   // Default the equipment filter to the user's saved profile (#28). An empty
   // profile leaves all equipment shown so the catalogue isn't hidden.
@@ -65,13 +73,14 @@ export default function LibraryScreen() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return EXERCISE_LIBRARY.filter(e => {
+      if (favoritesOnly && !favoriteSet.has(e.id)) return false;
       if (typeFilter !== 'all' && e.type !== typeFilter) return false;
       if (selectedCats.size > 0 && !e.categories.some(c => selectedCats.has(c))) return false;
       if (e.equipment !== 'none' && !selectedEquip.has(e.equipment)) return false;
       if (q && !e.name.toLowerCase().includes(q) && !e.desc.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [search, typeFilter, selectedCats, selectedEquip]);
+  }, [search, typeFilter, selectedCats, selectedEquip, favoritesOnly, favoriteSet]);
 
   const renderHeader = () => (
     <View>
@@ -84,6 +93,15 @@ export default function LibraryScreen() {
         autoCorrect={false}
         returnKeyType="search"
       />
+
+      <TouchableOpacity
+        onPress={() => setFavoritesOnly(v => !v)}
+        style={[styles.favFilter, favoritesOnly && { borderColor: FAVORITE_COLOR, backgroundColor: FAVORITE_COLOR + '1A' }]}
+      >
+        <Text style={[styles.favFilterText, { color: favoritesOnly ? FAVORITE_COLOR : Colors.textSecondary }]}>
+          {favoritesOnly ? '★ Showing favorites' : '☆ Favorites only'}
+        </Text>
+      </TouchableOpacity>
 
       <Text style={styles.filterLabel}>TYPE</Text>
       <View style={styles.row}>
@@ -165,6 +183,10 @@ export default function LibraryScreen() {
             exercise={item}
             expanded={expandedId === item.id}
             onToggle={() => setExpandedId(prev => (prev === item.id ? null : item.id))}
+            pinned={pinnedSet.has(item.id)}
+            favorited={favoriteSet.has(item.id)}
+            onTogglePin={() => togglePin(item.id)}
+            onToggleFavorite={() => toggleFavorite(item.id)}
           />
         )}
       />
@@ -176,18 +198,28 @@ function ExerciseCard({
   exercise: ex,
   expanded,
   onToggle,
+  pinned,
+  favorited,
+  onTogglePin,
+  onToggleFavorite,
 }: {
   exercise: Exercise;
   expanded: boolean;
   onToggle: () => void;
+  pinned: boolean;
+  favorited: boolean;
+  onTogglePin: () => void;
+  onToggleFavorite: () => void;
 }) {
   const typeColor = ex.type === 'work' ? Colors.work : Colors.stretch;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, pinned && { borderColor: Colors.work + '66' }]}>
       <TouchableOpacity onPress={onToggle} activeOpacity={0.7}>
         <View style={styles.cardHead}>
           <Text style={styles.cardName}>{ex.name}</Text>
+          {pinned && <Text style={styles.pinnedBadge}>📌</Text>}
+          {favorited && <Text style={styles.favBadge}>★</Text>}
           <Text style={[styles.chevron, expanded && styles.chevronOpen]}>▾</Text>
         </View>
         <View style={styles.metaRow}>
@@ -227,6 +259,18 @@ function ExerciseCard({
           )}
         </View>
       )}
+
+      <View style={styles.toggleRow}>
+        <Text style={styles.toggleHint}>
+          {pinned ? 'Pinned into your plan' : favorited ? 'Favorited' : 'Pin to keep · ★ to favorite'}
+        </Text>
+        <ExerciseToggles
+          pinned={pinned}
+          favorited={favorited}
+          onTogglePin={onTogglePin}
+          onToggleFavorite={onToggleFavorite}
+        />
+      </View>
     </View>
   );
 }
@@ -265,6 +309,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 4,
   },
+  favFilter: {
+    alignSelf: 'flex-start',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    marginBottom: 12,
+  },
+  favFilterText: { fontSize: 12, fontFamily: Fonts.mono, fontWeight: '700' },
   row: { flexDirection: 'row', gap: 8, marginBottom: 10 },
   wrapRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 },
   chip: {
@@ -295,9 +350,11 @@ const styles = StyleSheet.create({
     padding: 13,
     marginBottom: 8,
   },
-  cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   cardName: { flex: 1, color: Colors.text, fontSize: 14, fontWeight: '600' },
-  chevron: { color: Colors.textDim, fontSize: 13, paddingLeft: 8 },
+  pinnedBadge: { fontSize: 12 },
+  favBadge: { fontSize: 13, color: FAVORITE_COLOR },
+  chevron: { color: Colors.textDim, fontSize: 13, paddingLeft: 2 },
   chevronOpen: { transform: [{ rotate: '180deg' }] },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   typeTag: { fontSize: 10, fontFamily: Fonts.mono },
@@ -334,6 +391,16 @@ const styles = StyleSheet.create({
     padding: 9,
   },
   warnText: { fontSize: 12, color: '#FF9A9A', lineHeight: 18 },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 11,
+    paddingTop: 11,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+  },
+  toggleHint: { flex: 1, fontSize: 10, color: Colors.textDim, fontFamily: Fonts.mono },
   empty: { alignItems: 'center', paddingVertical: 40 },
   emptyText: { color: Colors.textSecondary, fontFamily: Fonts.mono, fontSize: 13 },
   emptyHint: { color: Colors.textMuted, fontFamily: Fonts.mono, fontSize: 11, marginTop: 6 },

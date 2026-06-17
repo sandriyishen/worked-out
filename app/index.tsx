@@ -35,6 +35,8 @@ export default function HomeScreen() {
     skipDays,
     availableEquipment,
     focusAreas,
+    pinnedExerciseIds,
+    favoriteExerciseIds,
     isTodaySkipDay,
     isDayOff,
     loaded,
@@ -57,6 +59,8 @@ export default function HomeScreen() {
     sessionDurationMinutes,
     focusAreas,
     availableEquipment,
+    pinnedExerciseIds,
+    favoriteExerciseIds,
     calData,
     ready: loaded,
   });

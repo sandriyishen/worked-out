@@ -64,6 +64,14 @@ describe('scoreExercise', () => {
     expect(popular).toBeCloseTo(base + DEFAULT_RANKING_WEIGHTS.popularity);
   });
 
+  it('adds the favorite boost only for favorited ids', () => {
+    const ex = makeExercise({ id: 'fav' });
+    const base = scoreExercise(ex);
+    const favored = scoreExercise(ex, { favoriteIds: new Set(['fav']) });
+    expect(favored).toBeCloseTo(base + DEFAULT_RANKING_WEIGHTS.favorite);
+    expect(scoreExercise(ex, { favoriteIds: new Set(['other']) })).toBeCloseTo(base);
+  });
+
   it('a perfect exercise scores ~1 with default weights', () => {
     const ex = makeExercise({ efficacy: 5, difficulty: 1, categories: ['posture'] });
     const score = scoreExercise(ex, {

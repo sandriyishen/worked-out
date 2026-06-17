@@ -15,6 +15,8 @@ interface Args {
   sessionDurationMinutes?: number;
   focusAreas: ExerciseCategory[];
   availableEquipment: Equipment[];
+  pinnedExerciseIds: string[];
+  favoriteExerciseIds: string[];
   calData: CalendarData;
   /** Gate generation until settings have loaded, so the first signature is correct. */
   ready: boolean;
@@ -57,6 +59,8 @@ export function useSessionPlan({
   sessionDurationMinutes,
   focusAreas,
   availableEquipment,
+  pinnedExerciseIds,
+  favoriteExerciseIds,
   calData,
   ready,
 }: Args): SessionPlanAPI {
@@ -80,6 +84,8 @@ export function useSessionPlan({
     durationMinutes: sessionDurationMinutes,
     focusAreas,
     availableEquipment,
+    pinnedExerciseIds,
+    favoriteExerciseIds,
   };
   const signature = planSignature(profile);
 

@@ -80,6 +80,10 @@ export interface GeneratorProfile {
   durationMinutes?: number;
   focusAreas: ExerciseCategory[];
   availableEquipment: Equipment[];
+  /** Exercises the user pinned (#2): each is guaranteed a spot in the plan. */
+  pinnedExerciseIds?: string[];
+  /** Favorited exercises (#2): a soft ranking boost (see ranking.ts), not a guarantee. */
+  favoriteExerciseIds?: string[];
 }
 
 /**
@@ -93,6 +97,10 @@ export function planSignature(profile: GeneratorProfile): string {
     d: profile.durationMinutes ?? null,
     f: [...profile.focusAreas].sort(),
     e: [...profile.availableEquipment].sort(),
+    // Pins guarantee inclusion and favorites change ranking, so a change to either
+    // must refresh the plan (#2).
+    p: [...(profile.pinnedExerciseIds ?? [])].sort(),
+    v: [...(profile.favoriteExerciseIds ?? [])].sort(),
   });
 }
 
@@ -104,6 +112,9 @@ interface SessionInput {
   rng: () => number;
   excludeIds: Set<string>;
   popularity: Map<string, number>;
+  favoriteIds: Set<string>;
+  /** Pinned exercises assigned to this session — added unconditionally, first (#2). */
+  forced?: Exercise[];
 }
 
 /** Selects one session's exercises (in run order) from the pool. */
@@ -116,7 +127,12 @@ function buildSession(input: SessionInput): Exercise[] {
   const ranked = available
     .map(e => ({
       e,
-      s: scoreExercise(e, { focusAreas: input.focusAreas, popularity: input.popularity }) + input.rng() * JITTER,
+      s:
+        scoreExercise(e, {
+          focusAreas: input.focusAreas,
+          popularity: input.popularity,
+          favoriteIds: input.favoriteIds,
+        }) + input.rng() * JITTER,
     }))
     .sort((a, b) => b.s - a.s)
     .map(x => x.e);
@@ -133,6 +149,16 @@ function buildSession(input: SessionInput): Exercise[] {
     used += cost(e);
     return true;
   };
+
+  // Pinned exercises assigned here are guaranteed: add them first, regardless of
+  // budget or equipment filter (explicit user intent, #2).
+  for (const e of input.forced ?? []) {
+    if (!pickedIds.has(e.id)) {
+      picked.push(e);
+      pickedIds.add(e.id);
+      used += cost(e);
+    }
+  }
 
   // Quota: ensure the session's primary focus is represented (borrowing from
   // related categories when the focus itself is thin in the pool).
@@ -197,11 +223,26 @@ export function generateDayPlan(
   const pool = getExercisesForEquipment(EXERCISE_LIBRARY, profile.availableEquipment);
   const budgetSecs = profile.durationMinutes ? profile.durationMinutes * 60 : DEFAULT_SESSION_SECS;
   const focus = profile.focusAreas ?? [];
-  const usedToday = new Set<string>();
+  const favoriteIds = new Set(profile.favoriteExerciseIds ?? []);
+
+  // Resolve pinned ids straight from the library (bypassing the equipment filter —
+  // a pin is explicit user intent), seed-shuffle so their placement varies on
+  // shuffle, then round-robin them across the day's sessions (#2).
+  const pinned = (profile.pinnedExerciseIds ?? [])
+    .map(getExerciseById)
+    .filter((e): e is Exercise => !!e);
+  for (let i = pinned.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [pinned[i], pinned[j]] = [pinned[j], pinned[i]];
+  }
+  // Pre-exclude every pinned id so the score-fill never picks one — they only ever
+  // enter via the forced list of their assigned session (no duplicates across the day).
+  const usedToday = new Set<string>(pinned.map(e => e.id));
   const sessions: PlannedSession[] = [];
 
   for (let i = 0; i < profile.dailyTarget; i++) {
     const primaryFocus = focus.length ? focus[i % focus.length] : undefined;
+    const forced = pinned.filter((_, k) => k % profile.dailyTarget === i);
     const exercises = buildSession({
       pool,
       primaryFocus,
@@ -210,6 +251,8 @@ export function generateDayPlan(
       rng,
       excludeIds: usedToday,
       popularity,
+      favoriteIds,
+      forced,
     });
     exercises.forEach(e => usedToday.add(e.id));
 

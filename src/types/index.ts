@@ -128,6 +128,8 @@ export interface AppSettings {
   skipOverrides?: string[];        // YYYY-MM-DD dates where a recurring skip is cancelled
   availableEquipment?: Equipment[]; // equipment the user has (chair/desk/wall/doorframe); undefined/empty = none
   focusAreas?: ExerciseCategory[];  // categories the user wants to target (#38 Phase C); feeds the generator
+  pinnedExerciseIds?: string[];     // exercises guaranteed into the generated plan, surviving shuffle (#2)
+  favoriteExerciseIds?: string[];   // bookmarked exercises; soft ranking boost + library filter (#2)
 }
 
 export interface PersistedState {
