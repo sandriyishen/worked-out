@@ -25,6 +25,7 @@ export default function HomeScreen() {
     dailyTarget,
     sessionDurationMinutes,
     skipDays,
+    availableEquipment,
     isTodaySkipDay,
     completedSessionIds,
     isDayOff,
@@ -35,6 +36,7 @@ export default function HomeScreen() {
     updateDailyTarget,
     updateSessionDuration,
     updateSkipDays,
+    updateAvailableEquipment,
     unskipToday,
   } = useWorkoutHistory();
 
@@ -94,11 +96,13 @@ export default function HomeScreen() {
             dailyTarget={dailyTarget}
             sessionDurationMinutes={sessionDurationMinutes}
             skipDays={skipDays}
+            availableEquipment={availableEquipment}
             isDayOff={isDayOff}
             sessionColor={session.color}
             onUpdateTarget={updateDailyTarget}
             onUpdateDuration={updateSessionDuration}
             onToggleSkipDay={updateSkipDays}
+            onToggleEquipment={updateAvailableEquipment}
             onMarkTodayOff={async () => { await markTodayOff(); timer.reset(); }}
             onUnmarkTodayOff={unmarkTodayOff}
           />

@@ -40,6 +40,18 @@ export function getExercisesWithNoEquipment(): Exercise[] {
   return getExercisesByEquipment('none');
 }
 
+/**
+ * Filters to exercises doable with the user's available equipment (feature #28).
+ * No-equipment exercises always qualify. An empty `available` list therefore
+ * yields only the no-equipment exercises.
+ */
+export function getExercisesForEquipment(
+  exercises: Exercise[],
+  available: Equipment[],
+): Exercise[] {
+  return exercises.filter(e => e.equipment === 'none' || available.includes(e.equipment));
+}
+
 /** Time a single exercise occupies in a session, including its prep window. */
 const exerciseCost = (e: Exercise) => e.duration + PREP_SECS;
 

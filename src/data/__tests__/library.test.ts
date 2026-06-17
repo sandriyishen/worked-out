@@ -4,6 +4,7 @@ import {
   getExercisesByArea,
   getExercisesByEquipment,
   getExercisesWithNoEquipment,
+  getExercisesForEquipment,
 } from '../exerciseLibrary';
 import { SESSIONS } from '../sessions';
 import { STANDALONE_EXERCISES } from '../standaloneExercises';
@@ -62,5 +63,18 @@ describe('query helpers', () => {
     const noEquip = getExercisesWithNoEquipment();
     expect(noEquip).toEqual(getExercisesByEquipment('none'));
     noEquip.forEach(e => expect(e.equipment).toBe('none'));
+  });
+
+  it('getExercisesForEquipment respects the available profile (#28)', () => {
+    // Empty profile → only no-equipment exercises.
+    const none = getExercisesForEquipment(EXERCISE_LIBRARY, []);
+    expect(none).toEqual(getExercisesWithNoEquipment());
+
+    // With chair → no-equipment plus chair exercises, nothing else.
+    const withChair = getExercisesForEquipment(EXERCISE_LIBRARY, ['chair']);
+    withChair.forEach(e => expect(['none', 'chair']).toContain(e.equipment));
+    expect(withChair.length).toBeGreaterThan(none.length);
+    expect(withChair.some(e => e.equipment === 'chair')).toBe(true);
+    expect(withChair.some(e => e.equipment === 'desk')).toBe(false);
   });
 });

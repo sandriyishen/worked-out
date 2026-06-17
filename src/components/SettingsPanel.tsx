@@ -1,23 +1,33 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Equipment } from '../types';
 import { Colors, Fonts } from '../theme';
 
 const WEEKDAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+const EQUIPMENT_OPTIONS: { key: Equipment; label: string }[] = [
+  { key: 'chair', label: '🪑 Chair' },
+  { key: 'desk', label: '🖥 Desk' },
+  { key: 'wall', label: '🧱 Wall' },
+  { key: 'doorframe', label: '🚪 Door' },
+];
 
 interface Props {
   dailyTarget: number;
   sessionDurationMinutes?: number;
   skipDays: number[];
+  availableEquipment: Equipment[];
   isDayOff: boolean;
   sessionColor: string;
   onUpdateTarget: (val: number) => void;
   onUpdateDuration: (val?: number) => void;
   onToggleSkipDay: (day: number) => void;
+  onToggleEquipment: (item: Equipment) => void;
   onMarkTodayOff: () => void;
   onUnmarkTodayOff: () => void;
 }
 
-export function SettingsPanel({ dailyTarget, sessionDurationMinutes, skipDays, isDayOff, sessionColor, onUpdateTarget, onUpdateDuration, onToggleSkipDay, onMarkTodayOff, onUnmarkTodayOff }: Props) {
+export function SettingsPanel({ dailyTarget, sessionDurationMinutes, skipDays, availableEquipment, isDayOff, sessionColor, onUpdateTarget, onUpdateDuration, onToggleSkipDay, onToggleEquipment, onMarkTodayOff, onUnmarkTodayOff }: Props) {
   return (
     <View style={styles.container}>
       <Text style={styles.label}>SESSIONS PER DAY</Text>
@@ -79,6 +89,26 @@ export function SettingsPanel({ dailyTarget, sessionDurationMinutes, skipDays, i
         })}
       </View>
       <Text style={styles.skipHint}>Skipped weekdays show a rest screen automatically</Text>
+      <View style={styles.divider} />
+      <Text style={styles.label}>MY EQUIPMENT</Text>
+      <View style={styles.skipRow}>
+        {EQUIPMENT_OPTIONS.map(({ key, label }) => {
+          const on = availableEquipment.includes(key);
+          return (
+            <TouchableOpacity
+              key={key}
+              onPress={() => onToggleEquipment(key)}
+              style={[
+                styles.equipChip,
+                on && { backgroundColor: sessionColor, borderColor: sessionColor },
+              ]}
+            >
+              <Text style={[styles.skipChipText, on && styles.skipChipTextOn]}>{label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <Text style={styles.skipHint}>Used to tailor the exercise library and quick sessions</Text>
       <View style={styles.divider} />
       {!isDayOff ? (
         <TouchableOpacity onPress={onMarkTodayOff} style={styles.dayOffBtn}>
@@ -159,6 +189,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  equipChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
     borderRadius: 10,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.12)',

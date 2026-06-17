@@ -108,6 +108,7 @@ export interface AppSettings {
   sessionDurationMinutes?: number; // undefined = Auto (full session, current behavior)
   skipDays?: number[];             // recurring rest weekdays, 0=Sun … 6=Sat (Date.getDay())
   skipOverrides?: string[];        // YYYY-MM-DD dates where a recurring skip is cancelled
+  availableEquipment?: Equipment[]; // equipment the user has (chair/desk/wall/doorframe); undefined/empty = none
 }
 
 export interface PersistedState {

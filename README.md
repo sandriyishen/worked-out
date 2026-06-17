@@ -28,6 +28,7 @@ The goal is to make movement the path of least resistance — something you do i
 - **Timed workout runner** with prep countdown, bilateral side-switch cues, pause/resume, and progress bar
 - **Calendar view** showing completion history with done / partial / missed / day-off status
 - **Weekly skip days & Day Off** — pick recurring rest weekdays or mark today off; rest days show a beach screen with one-tap un-skip
+- **Equipment profile** — tell the app what you have (chair, desk, wall, doorframe) to tailor the exercise library and quick sessions
 
 ---
 

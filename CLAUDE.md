@@ -53,7 +53,7 @@ src/
 
   components/
     Header.tsx              # App title + session color accent + Settings button
-    SettingsPanel.tsx       # Sessions/day + duration steppers, skip-day chips, day-off toggle
+    SettingsPanel.tsx       # Sessions/day + duration steppers, skip-day chips, equipment chips (#28), day-off toggle
     SessionTabBar.tsx       # Horizontal scrolling session pill tabs (generic Session 1…N)
     WorkoutTab.tsx          # Workout view: prep/active/done cards, exercise list, beach rest screen
     ExerciseList.tsx        # Expandable exercise cards (no diagrams)
@@ -97,6 +97,7 @@ interface AppSettings {
   sessionDurationMinutes?: number;  // undefined = Auto (full session); else a time budget
   skipDays?: number[];              // recurring rest weekdays, 0=Sun … 6=Sat
   skipOverrides?: string[];         // YYYY-MM-DD dates where a recurring skip is cancelled
+  availableEquipment?: Equipment[]; // equipment the user has (#28); feeds library + quick-session filtering
 }
 ```
 
