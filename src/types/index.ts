@@ -37,6 +37,12 @@ export interface Exercise {
   bilateral?: boolean;
   switchAt?: number;
   reps?: string;
+  /**
+   * Optional safety note, e.g. "Skip if you have acute lower-back pain."
+   * Surfaced in the library detail (#4) and optionally the runner prep card (#31).
+   * Absent for exercises with no specific contraindication.
+   */
+  contraindications?: string;
   categories: ExerciseCategory[];
   targetAreas: BodyArea[];
   equipment: Equipment;

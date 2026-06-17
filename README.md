@@ -54,6 +54,7 @@ The goal is to make movement the path of least resistance — something you do i
 ```bash
 npm install
 npx expo start --android   # development: opens in Expo Go or emulator
+npm test                   # run the unit-test suite
 ```
 
 To build an installable APK:
@@ -81,6 +82,8 @@ src/
   data/
     sessions.ts         # Built-in sessions + buildDaySessions() (generic per-day list)
     exerciseLibrary.ts  # Exercise catalogue + fitSessionToBudget() (duration trim/extend)
+    standaloneExercises.ts # Library-grown exercises, merged into the catalogue
+    __tests__/          # Jest unit tests for the data/algorithm layer
   hooks/
     useWorkoutTimer.ts  # Timer state machine
     useWorkoutHistory.ts # Calendar and completion state

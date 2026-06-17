@@ -37,8 +37,13 @@ src/
   data/
     sessions.ts             # 5 built-in WorkoutSessions (full library metadata each) +
                             #   buildDaySessions(n): generic Session 1…N by cycling built-ins
-    exerciseLibrary.ts      # Flat list of all exercises + query helpers;
+    exerciseLibrary.ts      # EXERCISE_LIBRARY = de-duped(built-in session exercises +
+                            #   STANDALONE_EXERCISES); query helpers;
                             #   fitSessionToBudget() trims/extends a session to a time budget
+    standaloneExercises.ts  # STANDALONE_EXERCISES: library-grown content (#26), merged into
+                            #   EXERCISE_LIBRARY so it's reachable when building sessions (not
+                            #   library-only). Authored in #26 Phase 2 behind a human-review gate
+    __tests__/              # Jest unit tests for the data/algorithm layer (#29)
 
   hooks/
     useWorkoutTimer.ts      # Phase machine: idle → prep → active → done
@@ -71,6 +76,7 @@ interface Exercise {
   bilateral?: boolean;
   switchAt?: number;
   reps?: string;
+  contraindications?: string;       // optional "stop if it hurts" safety note (#31)
 
   // Library metadata (powers features #4 and #5)
   categories: ExerciseCategory[];   // e.g. ['back_pain', 'carpal_tunnel']
@@ -124,9 +130,22 @@ The `exerciseLibrary.ts` file exports helper functions (`getExercisesByCategory`
 
 ### Feature 4: Exercise library screen
 - New Expo Router screen: `app/library.tsx`
-- Read from `EXERCISE_LIBRARY` in `exerciseLibrary.ts`
+- Read from `EXERCISE_LIBRARY` in `exerciseLibrary.ts` (now de-duped `built-in
+  session exercises + STANDALONE_EXERCISES`; standalone content lives in
+  `data/standaloneExercises.ts` and is authored by #26).
 - Filter controls: category chips (back pain, neck, carpal tunnel, etc.) + equipment filter
 - Each exercise card links to detail view and has "Add to session" action
+- Show `contraindications` (when set) in the card detail.
+
+### Catalogue & safety groundwork — 🚧 In progress (Phase 1: #26 / #31 / #29)
+- **#31 (shipped in this branch):** `Exercise.contraindications?: string` — optional
+  "stop if it hurts" note; render in the library detail and optionally the runner prep card.
+- **#26 plumbing (shipped in this branch):** `STANDALONE_EXERCISES` + de-dup merge into
+  `EXERCISE_LIBRARY` (built-ins win on id collision). Content authoring is #26 *Phase 2*
+  and is **developer-gated** (category approval first) + **human safety review before
+  merge to `main`** — movement instructions are quasi-medical.
+- **#29 (shipped in this branch):** Jest (`jest-expo` preset) unit-test harness for the
+  pure data/algorithm functions. See the Testing convention below.
 
 ### Feature 5: Quick session generator
 - New screen: `app/quick-session.tsx`
@@ -144,6 +163,8 @@ The `exerciseLibrary.ts` file exports helper functions (`getExercisesByCategory`
 - **Relative imports only.** No `@/` path aliases — keeps babel config simple.
 - **StyleSheet.create** for all styles; no inline objects except for dynamic values (session color, progress width).
 - **One hook per concern.** Timer logic in `useWorkoutTimer`, history/persistence in `useWorkoutHistory`. Keep them separate.
+- **Unit tests for pure logic.** Data/algorithm functions (`fitSessionToBudget`, `EXERCISE_LIBRARY` composition, `generateQuickSession`, repeat/status semantics) get Jest tests under `src/**/__tests__/*.test.ts`. Run with `npm test`. `tsc --noEmit` remains the type guardrail; jest globals are enabled via `"types": ["jest"]` in `tsconfig.json`.
+- **AI-authored exercise content needs a human safety review** before merging to `main` (movement cues are quasi-medical). New library content goes in `data/standaloneExercises.ts`.
 - **Keep root docs current.** Any change that alters user-facing behavior, the data model, file structure, build steps, or dependencies must update the affected root Markdown in the *same* change — never as a follow-up. `README.md` (features + project structure), `CLAUDE.md` (architecture, data model, conventions, planned-feature status), and `DEPENDENCIES.md` (build/toolchain versions). When a planned feature ships, move it out of "Planned" in both `README.md` and `CLAUDE.md`.
 - **The philosophy test.** Before adding any feature, ask: does this make it easier to move for 3 minutes right now?
 
@@ -210,6 +231,7 @@ tech-debt) is an item with three custom fields:
 npm install
 npx expo start --android     # run on Android device/emulator
 npx expo start               # open Expo Go QR code
+npm test                     # run the Jest unit-test suite
 ```
 
 ## Building an APK

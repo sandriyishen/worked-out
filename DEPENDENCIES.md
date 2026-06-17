@@ -207,6 +207,23 @@ npm install expo-camera
 
 ---
 
+## Testing (dev only)
+
+Unit tests run on **Jest** via the `jest-expo` preset — pure dev tooling, not part of the
+APK. Installed with plain `npm install` (not `expo install`):
+
+| Package | Version | Notes |
+|---|---|---|
+| `jest` | `^29.7.0` | Pinned to 29 — `jest-expo` 56 is incompatible with Jest 30 |
+| `jest-expo` | `^56.0.5` | Matches Expo SDK 56 |
+| `@react-native/jest-preset` | `^0.85.3` | Peer of `jest-expo`; matches RN 0.85 |
+| `@types/jest` | `^29.5.x` | Jest globals for `tsc` (enabled via `"types": ["jest"]` in `tsconfig.json`) |
+| `react-test-renderer` | `^19.2.x` | Pulled in by the preset |
+
+Run with `npm test` (or `npm run test:watch`). Tests live in `src/**/__tests__/*.test.ts`.
+
+---
+
 ## Isolation options
 
 If you want to avoid polluting your global system with Node, JDK, and Android SDK versions, or you want a reproducible environment anyone can clone and run:

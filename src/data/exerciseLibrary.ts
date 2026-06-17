@@ -1,16 +1,28 @@
 import { Exercise, ExerciseCategory, BodyArea, Equipment, WorkoutSession } from '../types';
 import { PREP_SECS, SESSIONS } from './sessions';
+import { STANDALONE_EXERCISES } from './standaloneExercises';
+
+/** Removes duplicate exercises by `id`, keeping the first occurrence. */
+function dedupeById(exercises: Exercise[]): Exercise[] {
+  const seen = new Set<string>();
+  return exercises.filter(e => (seen.has(e.id) ? false : (seen.add(e.id), true)));
+}
 
 /**
- * The exercise library is the single source of truth for all exercises.
+ * The exercise library is the single source of truth for all exercises, and the
+ * pool the session machinery draws from (`fitSessionToBudget`, and the #5 quick
+ * generator) — so library content is reachable when building sessions, not just
+ * in the #4 browser.
  *
- * Current exercises come from the built-in sessions. As the library grows
- * (feature #4), additional exercises can be appended here directly.
- *
- * Feature #5 (quick session generator) will use getExercisesByCategory and
- * generateQuickSession to build targeted sessions on demand.
+ * It combines the exercises curated into the 5 built-in `SESSIONS` with the
+ * `STANDALONE_EXERCISES` added for broad per-complaint coverage (feature #26).
+ * Sessions are listed first so that, on an id collision, the curated built-in
+ * version wins over a standalone entry.
  */
-export const EXERCISE_LIBRARY: Exercise[] = SESSIONS.flatMap(s => s.exercises);
+export const EXERCISE_LIBRARY: Exercise[] = dedupeById([
+  ...SESSIONS.flatMap(s => s.exercises),
+  ...STANDALONE_EXERCISES,
+]);
 
 export function getExercisesByCategory(category: ExerciseCategory): Exercise[] {
   return EXERCISE_LIBRARY.filter(e => e.categories.includes(category));
