@@ -1,23 +1,31 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
-import { buildDaySessions } from '../src/data/sessions';
-import { fitSessionToBudget } from '../src/data/exerciseLibrary';
+import { WorkoutSession } from '../src/types';
 import { useWorkoutTimer } from '../src/hooks/useWorkoutTimer';
-import { useWorkoutHistory } from '../src/hooks/useWorkoutHistory';
+import { useWorkoutHistoryContext } from '../src/state/WorkoutHistoryContext';
+import { useSessionPlan } from '../src/hooks/useSessionPlan';
 import { Header } from '../src/components/Header';
 import { SettingsPanel } from '../src/components/SettingsPanel';
-import { SessionTabBar } from '../src/components/SessionTabBar';
-import { WorkoutTab } from '../src/components/WorkoutTab';
+import { SessionAccordion } from '../src/components/SessionAccordion';
 import { CalendarTab } from '../src/components/CalendarTab';
 import { Colors, Fonts } from '../src/theme';
 
 type Tab = 'workout' | 'calendar';
 
+// Accent used before the generated plan has hydrated (first launch / mid-regenerate).
+const FALLBACK_SESSION: WorkoutSession = {
+  id: 0, name: '', emoji: '', time: '', focus: '', color: Colors.work, exercises: [],
+};
+
 export default function HomeScreen() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('workout');
-  const [activeSession, setActiveSession] = useState(0);
+  // Which session row is expanded (the active, timer-bound session). One at a
+  // time — true accordion. `null` means every row is collapsed.
+  const [expanded, setExpanded] = useState<number | null>(0);
   const [showSettings, setShowSettings] = useState(false);
 
   const {
@@ -25,132 +33,176 @@ export default function HomeScreen() {
     dailyTarget,
     sessionDurationMinutes,
     skipDays,
+    availableEquipment,
+    focusAreas,
+    pinnedExerciseIds,
+    favoriteExerciseIds,
     isTodaySkipDay,
-    completedSessionIds,
     isDayOff,
+    loaded,
     markSessionComplete,
     toggleDayOff,
     markTodayOff,
-    unmarkTodayOff,
     updateDailyTarget,
     updateSessionDuration,
     updateSkipDays,
+    updateAvailableEquipment,
+    updateFocusAreas,
     unskipToday,
-  } = useWorkoutHistory();
+    todayStr,
+  } = useWorkoutHistoryContext();
 
-  // The day's sessions are generic ("Session 1"…N), count driven by dailyTarget.
-  const daySessions = useMemo(() => buildDaySessions(dailyTarget), [dailyTarget]);
-  const safeActive = Math.min(activeSession, daySessions.length - 1);
-  const session = daySessions[safeActive];
+  // The day's sessions are a persisted, generated plan (#38 Phase C): stable day to
+  // day, regenerated only on profile change or an explicit shuffle.
+  const { daySessions, shuffle } = useSessionPlan({
+    dailyTarget,
+    sessionDurationMinutes,
+    focusAreas,
+    availableEquipment,
+    pinnedExerciseIds,
+    favoriteExerciseIds,
+    calData,
+    ready: loaded,
+  });
   const effectiveDayOff = isDayOff || isTodaySkipDay;
 
-  // Keep the selected index in range when the target shrinks below it.
+  // The header/tab accent follows the expanded session, defaulting to the first.
+  const accentSession = daySessions[expanded ?? 0] ?? daySessions[0] ?? FALLBACK_SESSION;
+
+  // The expanded session drives the single timer; its exercises are the plan's.
+  const expandedSession = expanded == null ? null : daySessions[expanded] ?? null;
+  const expandedExercises = useMemo(
+    () => expandedSession?.exercises ?? [],
+    [expandedSession],
+  );
+
+  // Keep the expanded index in range when the plan shrinks below it.
   useEffect(() => {
-    if (activeSession > daySessions.length - 1) setActiveSession(daySessions.length - 1);
+    if (daySessions.length > 0 && expanded != null && expanded > daySessions.length - 1) {
+      setExpanded(daySessions.length - 1);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [daySessions.length]);
 
-  const exercises = useMemo(
-    () => fitSessionToBudget(session, sessionDurationMinutes),
-    [session, sessionDurationMinutes],
-  );
-
   const handleSessionComplete = useCallback(() => {
-    markSessionComplete(safeActive);
-  }, [safeActive, markSessionComplete]);
+    if (expanded != null) markSessionComplete(expanded, expandedExercises.map(e => e.id));
+  }, [expanded, expandedExercises, markSessionComplete]);
 
   const timer = useWorkoutTimer({
-    exercises,
+    exercises: expandedExercises,
     onSessionComplete: handleSessionComplete,
   });
 
-  // Restart cleanly when the time budget changes mid-session so the timer and
-  // the (re-derived) exercise list stay in sync.
+  // Reset the timer whenever the plan changes (regenerate / shuffle / duration edit)
+  // so a running session never bleeds onto a freshly-generated exercise list.
   useEffect(() => {
     timer.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionDurationMinutes]);
+  }, [daySessions]);
 
-  const handleSessionChange = useCallback((idx: number) => {
+  // Expand a collapsed row (or collapse the open one). Either way the timer
+  // resets so a half-run session never bleeds into another row.
+  const handleToggle = useCallback((idx: number) => {
     timer.reset();
-    setActiveSession(idx);
+    setExpanded(prev => (prev === idx ? null : idx));
   }, [timer]);
 
   const handleNextSession = useCallback(() => {
-    handleSessionChange(safeActive + 1);
-  }, [safeActive, handleSessionChange]);
+    if (daySessions.length === 0) return;
+    timer.reset();
+    setExpanded(prev => (prev == null ? null : Math.min(prev + 1, daySessions.length - 1)));
+  }, [timer, daySessions.length]);
+
+  const handleSkipToday = useCallback(async () => {
+    await markTodayOff();
+    timer.reset();
+  }, [markTodayOff, timer]);
+
+  // Today's runs drive both the per-slot row badge and the day total. With repeat
+  // tracking (#3) the day total is the run count, so repeating a session counts.
+  const todaysRuns = calData[todayStr()]?.sessionRuns ?? [];
+  const runCountFor = useCallback(
+    (slot: number) => todaysRuns.filter(r => r.sessionId === slot).length,
+    [todaysRuns],
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Sticky header section */}
+      {/* Sticky header */}
       <View style={[styles.stickyHeader, { borderBottomColor: Colors.border }]}>
         <Header
-          session={session}
+          session={accentSession}
           showSettings={showSettings}
           onToggleSettings={() => setShowSettings(s => !s)}
         />
-        {showSettings && (
+      </View>
+
+      {showSettings ? (
+        /* Settings is its own scrollable region so a tall expanded section
+           (e.g. Issues / Focus) stays fully reachable. */
+        <ScrollView style={styles.content} contentContainerStyle={styles.settingsScroll} keyboardShouldPersistTaps="handled">
           <SettingsPanel
             dailyTarget={dailyTarget}
             sessionDurationMinutes={sessionDurationMinutes}
             skipDays={skipDays}
-            isDayOff={isDayOff}
-            sessionColor={session.color}
+            availableEquipment={availableEquipment}
+            focusAreas={focusAreas}
+            sessionColor={accentSession.color}
             onUpdateTarget={updateDailyTarget}
             onUpdateDuration={updateSessionDuration}
             onToggleSkipDay={updateSkipDays}
-            onMarkTodayOff={async () => { await markTodayOff(); timer.reset(); }}
-            onUnmarkTodayOff={unmarkTodayOff}
+            onToggleEquipment={updateAvailableEquipment}
+            onToggleFocus={updateFocusAreas}
+            onOpenLibrary={() => router.push('/library')}
           />
-        )}
-        {!effectiveDayOff && (
-          <SessionTabBar
-            sessions={daySessions}
-            activeSession={safeActive}
-            completedSessionIds={completedSessionIds}
-            onSelect={handleSessionChange}
-          />
-        )}
-      </View>
+        </ScrollView>
+      ) : (
+        <>
+          {/* Tab bar */}
+          <View style={[styles.tabBar, { borderBottomColor: Colors.border }]}>
+            {(['workout', 'calendar'] as Tab[]).map(id => (
+              <TouchableOpacity
+                key={id}
+                onPress={() => setActiveTab(id)}
+                style={[styles.tab, activeTab === id && { borderBottomColor: accentSession.color, borderBottomWidth: 2 }]}
+              >
+                <Text style={[styles.tabText, { color: activeTab === id ? accentSession.color : Colors.textMuted, fontWeight: activeTab === id ? '700' : '400' }]}>
+                  {id === 'workout' ? 'WORKOUT' : 'CALENDAR'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-      {/* Tab bar */}
-      <View style={[styles.tabBar, { borderBottomColor: Colors.border }]}>
-        {(['workout', 'calendar'] as Tab[]).map(id => (
-          <TouchableOpacity
-            key={id}
-            onPress={() => setActiveTab(id)}
-            style={[styles.tab, activeTab === id && { borderBottomColor: session.color, borderBottomWidth: 2 }]}
-          >
-            <Text style={[styles.tabText, { color: activeTab === id ? session.color : Colors.textMuted, fontWeight: activeTab === id ? '700' : '400' }]}>
-              {id === 'workout' ? 'WORKOUT' : 'CALENDAR'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Scrollable content */}
-      <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
-        {activeTab === 'calendar' ? (
-          <CalendarTab
-            calData={calData}
-            dailyTarget={dailyTarget}
-            onToggleDay={toggleDayOff}
-          />
-        ) : (
-          <WorkoutTab
-            session={session}
-            exercises={exercises}
-            timer={timer}
-            isDayOff={effectiveDayOff}
-            completedSessionIds={completedSessionIds}
-            dailyTarget={dailyTarget}
-            activeSession={safeActive}
-            totalSessions={daySessions.length}
-            onNextSession={handleNextSession}
-            onUnskipToday={unskipToday}
-          />
-        )}
-      </ScrollView>
+          {/* Scrollable content */}
+          <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
+            {activeTab === 'calendar' ? (
+              <CalendarTab
+                calData={calData}
+                dailyTarget={dailyTarget}
+                onToggleDay={toggleDayOff}
+              />
+            ) : (
+              <SessionAccordion
+                sessions={daySessions}
+                expanded={effectiveDayOff ? null : expanded}
+                onToggle={handleToggle}
+                isDayOff={effectiveDayOff}
+                onUnskipToday={unskipToday}
+                expandedExercises={expandedExercises}
+                timer={timer}
+                runCountFor={runCountFor}
+                sessionsDone={todaysRuns.length}
+                dailyTarget={dailyTarget}
+                onNextSession={handleNextSession}
+                onShuffle={shuffle}
+                hasFocusAreas={focusAreas.length > 0}
+                onOpenQuickSession={() => router.push('/quick-session')}
+                onSkipToday={handleSkipToday}
+              />
+            )}
+          </ScrollView>
+        </>
+      )}
     </SafeAreaView>
   );
 }
@@ -183,5 +235,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  settingsScroll: {
+    paddingTop: 12,
+    paddingBottom: 48,
   },
 });

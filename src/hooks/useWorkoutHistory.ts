@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CalendarData, DayRecord } from '../types';
+import { CalendarData, DayRecord, Equipment, ExerciseCategory } from '../types';
 import { loadState, saveState } from '../storage';
 
 function todayStr(): string {
@@ -12,6 +12,10 @@ export function useWorkoutHistory() {
   const [sessionDurationMinutes, setSessionDurationMinutes] = useState<number | undefined>(undefined);
   const [skipDays, setSkipDays] = useState<number[]>([]);
   const [skipOverrides, setSkipOverrides] = useState<string[]>([]);
+  const [availableEquipment, setAvailableEquipment] = useState<Equipment[]>([]);
+  const [focusAreas, setFocusAreas] = useState<ExerciseCategory[]>([]);
+  const [pinnedExerciseIds, setPinnedExerciseIds] = useState<string[]>([]);
+  const [favoriteExerciseIds, setFavoriteExerciseIds] = useState<string[]>([]);
   const [completedSessionIds, setCompletedSessionIds] = useState<Set<number>>(new Set());
   const [isDayOff, setIsDayOff] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -25,6 +29,10 @@ export function useWorkoutHistory() {
         setSessionDurationMinutes(state.settings?.sessionDurationMinutes);
         setSkipDays(state.settings?.skipDays ?? []);
         setSkipOverrides(state.settings?.skipOverrides ?? []);
+        setAvailableEquipment(state.settings?.availableEquipment ?? []);
+        setFocusAreas(state.settings?.focusAreas ?? []);
+        setPinnedExerciseIds(state.settings?.pinnedExerciseIds ?? []);
+        setFavoriteExerciseIds(state.settings?.favoriteExerciseIds ?? []);
         const td = todayStr();
         const rec = (state.calData ?? {})[td];
         if (rec) {
@@ -42,43 +50,61 @@ export function useWorkoutHistory() {
     duration?: number,
     skip: number[] = skipDays,
     overrides: string[] = skipOverrides,
+    equipment: Equipment[] = availableEquipment,
+    focus: ExerciseCategory[] = focusAreas,
+    pinned: string[] = pinnedExerciseIds,
+    favorites: string[] = favoriteExerciseIds,
   ) => {
     await saveState({
       calData: newCal,
-      settings: { dailyTarget: target, sessionDurationMinutes: duration, skipDays: skip, skipOverrides: overrides },
+      settings: {
+        dailyTarget: target,
+        sessionDurationMinutes: duration,
+        skipDays: skip,
+        skipOverrides: overrides,
+        availableEquipment: equipment,
+        focusAreas: focus,
+        pinnedExerciseIds: pinned,
+        favoriteExerciseIds: favorites,
+      },
       version: 3,
     });
-  }, [skipDays, skipOverrides]);
+  }, [skipDays, skipOverrides, availableEquipment, focusAreas, pinnedExerciseIds, favoriteExerciseIds]);
 
-  const markSessionComplete = useCallback(async (sessionId: number) => {
-    setCompletedSessionIds(prev => {
-      const next = new Set([...prev, sessionId]);
-      const count = next.size;
-      const td = todayStr();
+  const markSessionComplete = useCallback(async (sessionId: number, exerciseIds: string[] = []) => {
+    const td = todayStr();
+    // The set tracks which sessions have been run at least once (record-keeping);
+    // the day's *count* comes from sessionRuns so repeats are counted (#3).
+    setCompletedSessionIds(prev => new Set([...prev, sessionId]));
 
-      setCalData(cal => {
-        const existing: DayRecord = cal[td] ?? {
-          date: td,
-          sessionsCompleted: 0,
-          status: 'partial',
-          completedSessionIds: [],
-          sessionRuns: [],
-        };
-        const status = count >= dailyTarget ? 'completed' : 'partial';
-        const run = { sessionId, completedAt: Date.now() };
-        const updated: DayRecord = {
-          ...existing,
-          sessionsCompleted: count,
-          status,
-          completedSessionIds: [...next],
-          sessionRuns: [...(existing.sessionRuns ?? []), run],
-        };
-        const newCal = { ...cal, [td]: updated };
-        persist(newCal, dailyTarget, sessionDurationMinutes);
-        return newCal;
-      });
-
-      return next;
+    setCalData(cal => {
+      const existing: DayRecord = cal[td] ?? {
+        date: td,
+        sessionsCompleted: 0,
+        status: 'partial',
+        completedSessionIds: [],
+        sessionRuns: [],
+      };
+      // Record the exercises actually completed so popularity (#38) / #27 are exact.
+      const run = { sessionId, completedAt: Date.now(), exerciseIds };
+      const sessionRuns = [...(existing.sessionRuns ?? []), run];
+      const completedSessionIds = Array.from(
+        new Set([...(existing.completedSessionIds ?? []), sessionId]),
+      );
+      // Repeat tracking (#3): every run counts toward the daily target, including
+      // repeats of the same session — so the total is the run count, not unique IDs.
+      const runCount = sessionRuns.length;
+      const status = runCount >= dailyTarget ? 'completed' : 'partial';
+      const updated: DayRecord = {
+        ...existing,
+        sessionsCompleted: runCount,
+        status,
+        completedSessionIds,
+        sessionRuns,
+      };
+      const newCal = { ...cal, [td]: updated };
+      persist(newCal, dailyTarget, sessionDurationMinutes);
+      return newCal;
     });
   }, [dailyTarget, sessionDurationMinutes, persist]);
 
@@ -141,6 +167,41 @@ export function useWorkoutHistory() {
     await persist(calData, dailyTarget, sessionDurationMinutes, next, skipOverrides);
   }, [calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, persist]);
 
+  const updateAvailableEquipment = useCallback(async (item: Equipment) => {
+    const next = availableEquipment.includes(item)
+      ? availableEquipment.filter(e => e !== item)
+      : [...availableEquipment, item];
+    setAvailableEquipment(next);
+    await persist(calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, next);
+  }, [availableEquipment, calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, persist]);
+
+  const updateFocusAreas = useCallback(async (category: ExerciseCategory) => {
+    const next = focusAreas.includes(category)
+      ? focusAreas.filter(c => c !== category)
+      : [...focusAreas, category];
+    setFocusAreas(next);
+    await persist(calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, availableEquipment, next);
+  }, [focusAreas, calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, availableEquipment, persist]);
+
+  // Pin/unpin an exercise (#2). Pinned ids feed the generator (and its signature),
+  // so toggling refreshes the plan to guarantee the exercise's inclusion.
+  const togglePin = useCallback(async (id: string) => {
+    const next = pinnedExerciseIds.includes(id)
+      ? pinnedExerciseIds.filter(x => x !== id)
+      : [...pinnedExerciseIds, id];
+    setPinnedExerciseIds(next);
+    await persist(calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, availableEquipment, focusAreas, next);
+  }, [pinnedExerciseIds, calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, availableEquipment, focusAreas, persist]);
+
+  // Favorite/unfavorite an exercise (#2): a bookmark + soft ranking boost (see ranking.ts).
+  const toggleFavorite = useCallback(async (id: string) => {
+    const next = favoriteExerciseIds.includes(id)
+      ? favoriteExerciseIds.filter(x => x !== id)
+      : [...favoriteExerciseIds, id];
+    setFavoriteExerciseIds(next);
+    await persist(calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, availableEquipment, focusAreas, pinnedExerciseIds, next);
+  }, [favoriteExerciseIds, pinnedExerciseIds, calData, dailyTarget, sessionDurationMinutes, skipDays, skipOverrides, availableEquipment, focusAreas, persist]);
+
   // Today is a rest day if its weekday is a recurring skip day and not overridden for today.
   const isTodaySkipDay = skipDays.includes(new Date().getDay()) && !skipOverrides.includes(todayStr());
 
@@ -165,17 +226,25 @@ export function useWorkoutHistory() {
     sessionDurationMinutes,
     skipDays,
     skipOverrides,
+    availableEquipment,
+    focusAreas,
+    pinnedExerciseIds,
+    favoriteExerciseIds,
     isTodaySkipDay,
     completedSessionIds,
     isDayOff,
     loaded,
     markSessionComplete,
+    togglePin,
+    toggleFavorite,
     toggleDayOff,
     markTodayOff,
     unmarkTodayOff,
     updateDailyTarget,
     updateSessionDuration,
     updateSkipDays,
+    updateAvailableEquipment,
+    updateFocusAreas,
     unskipToday,
     todayStr,
   };

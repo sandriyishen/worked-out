@@ -4,79 +4,43 @@ import { Exercise, WorkoutSession } from '../types';
 import { WorkoutTimerAPI } from '../hooks/useWorkoutTimer';
 import { Colors, Fonts } from '../theme';
 import { ExerciseList } from './ExerciseList';
-import { PREP_SECS } from '../data/sessions';
 
 interface Props {
   session: WorkoutSession;
-  exercises?: Exercise[];
+  exercises: Exercise[];
   timer: WorkoutTimerAPI;
-  isDayOff: boolean;
-  completedSessionIds: Set<number>;
-  dailyTarget: number;
-  activeSession: number;
-  totalSessions: number;
-  onNextSession: () => void;
-  onUnskipToday: () => void;
+  // Daily-plan context (omitted for quick sessions, #5):
+  sessionsDone?: number;
+  dailyTarget?: number;
+  activeSession?: number;
+  totalSessions?: number;
+  onNextSession?: () => void;
+  // Quick-session mode (#5): simpler done card with an exit instead of "Next".
+  quick?: boolean;
+  onExit?: () => void;
 }
 
-export function WorkoutTab({
+/**
+ * The run controls for a single session: prep / active / done cards, the start
+ * button, and the exercise list. Used both inside an expanded `SessionRow` (the
+ * accordion body, #25) and standalone on the quick-session screen (#5, `quick`).
+ */
+export function SessionRunner({
   session,
-  exercises = session.exercises,
+  exercises,
   timer,
-  isDayOff,
-  completedSessionIds,
-  dailyTarget,
-  activeSession,
-  totalSessions,
+  sessionsDone = 0,
+  dailyTarget = 0,
+  activeSession = 0,
+  totalSessions = 1,
   onNextSession,
-  onUnskipToday,
+  quick = false,
+  onExit,
 }: Props) {
   const { phase, exIdx, timer: t, paused, showSwitch, exercise, start, reset, togglePause } = timer;
 
-  const totalSecs = exercises.reduce((a, e) => a + e.duration + PREP_SECS, 0);
-  const totalMin = Math.floor(totalSecs / 60);
-  const totalSecRem = totalSecs % 60;
-  const sessionsDone = completedSessionIds.size;
-
-  // On any rest day (manual or recurring skip) the workout is replaced entirely by a
-  // celebratory beach screen — no sessions, lists, or tips are shown.
-  if (isDayOff) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.beachCard}>
-          <Text style={styles.beachArt}>☀️🌴🏖️🌊</Text>
-          <Text style={styles.beachTitle}>Enjoy your day off</Text>
-          <Text style={styles.beachSubtitle}>Rest is part of the work. See you tomorrow.</Text>
-          <TouchableOpacity onPress={onUnskipToday} style={styles.unskipBtn}>
-            <Text style={styles.unskipBtnText}>Un-skip today</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      {/* Session info card */}
-      <View style={[styles.sessionCard, { backgroundColor: session.color + '15', borderColor: session.color + '35' }]}>
-        <View style={styles.sessionCardRow}>
-          <View style={styles.sessionCardLeft}>
-            <Text style={styles.sessionEmoji}>{session.emoji}</Text>
-            <Text style={styles.sessionName}>{session.name}</Text>
-            <Text style={[styles.sessionFocus, { color: session.color }]}>
-              {session.time ? `${session.time} · ${session.focus}` : session.focus}
-            </Text>
-          </View>
-          <View style={styles.sessionCardRight}>
-            <Text style={[styles.sessionDuration, { color: session.color }]}>
-              {totalMin}:{String(totalSecRem).padStart(2, '0')}
-            </Text>
-            <Text style={styles.sessionDurationLabel}>TOTAL</Text>
-            <Text style={styles.sessionProgress}>{sessionsDone}/{dailyTarget} today</Text>
-          </View>
-        </View>
-      </View>
-
       {/* GET READY screen */}
       {phase === 'prep' && exercise && (
         <View style={[styles.prepCard, { borderColor: session.color }]}>
@@ -91,6 +55,9 @@ export function WorkoutTab({
             </View>
           )}
           <Text style={styles.prepDesc}>{exercise.desc}</Text>
+          {exercise.contraindications && (
+            <Text style={styles.prepCaution}>⚠ {exercise.contraindications}</Text>
+          )}
         </View>
       )}
 
@@ -153,25 +120,32 @@ export function WorkoutTab({
       {phase === 'done' && (
         <View style={styles.doneCard}>
           <Text style={styles.doneEmoji}>✅</Text>
-          <Text style={styles.doneTitle}>Session Complete!</Text>
+          <Text style={styles.doneTitle}>{quick ? 'Quick Session Done!' : 'Session Complete!'}</Text>
           <Text style={styles.doneSubtitle}>
-            {sessionsDone}/{dailyTarget} sessions today
-            {sessionsDone >= dailyTarget ? ' — Day Complete! 🎉' : ''}
+            {quick
+              ? 'Nice — that counts. Logged to your history.'
+              : `${sessionsDone}/${dailyTarget} sessions today${sessionsDone >= dailyTarget ? ' — Day Complete! 🎉' : ''}`}
           </Text>
           <View style={styles.doneButtons}>
             <TouchableOpacity onPress={reset} style={styles.resetBtn}>
-              <Text style={styles.resetBtnText}>↩ Reset</Text>
+              <Text style={styles.resetBtnText}>↩ Again</Text>
             </TouchableOpacity>
-            {activeSession < totalSessions - 1 && (
-              <TouchableOpacity onPress={onNextSession} style={styles.nextBtn}>
-                <Text style={styles.nextBtnText}>Next Session →</Text>
+            {quick ? (
+              <TouchableOpacity onPress={onExit} style={styles.nextBtn}>
+                <Text style={styles.nextBtnText}>Done</Text>
               </TouchableOpacity>
+            ) : (
+              activeSession < totalSessions - 1 && (
+                <TouchableOpacity onPress={onNextSession} style={styles.nextBtn}>
+                  <Text style={styles.nextBtnText}>Next Session →</Text>
+                </TouchableOpacity>
+              )
             )}
           </View>
         </View>
       )}
 
-      {/* Start button (rest days are handled by the early-return beach screen) */}
+      {/* Start button (rest days are handled by the accordion's beach screen) */}
       {phase === 'idle' && (
         <TouchableOpacity
           onPress={start}
@@ -188,82 +162,13 @@ export function WorkoutTab({
         exIdx={exIdx}
         sessionColor={session.color}
       />
-
-      {/* Pro tips */}
-      <View style={styles.tipsCard}>
-        <Text style={styles.tipsLabel}>PRO TIPS</Text>
-        <Text style={styles.tipItem}>
-          Fat loss comes from <Text style={styles.tipHighlight}>calorie deficit</Text> — these sessions spike metabolism throughout the day
-        </Text>
-        <Text style={styles.tipItem}>
-          Stretches directly target{' '}
-          <Text style={styles.tipHighlight}>neck, traps, rhomboids & thoracic spine</Text> pain from sitting
-        </Text>
-        <Text style={[styles.tipItem, { color: session.color }]}>
-          After 4 weeks, set your target to 10 and repeat each session twice daily
-        </Text>
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-
-  // Session info card
-  sessionCard: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-    paddingHorizontal: 18,
-    marginBottom: 16,
-  },
-  sessionCardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  sessionCardLeft: {
-    flex: 1,
-  },
-  sessionEmoji: {
-    fontSize: 24,
-    marginBottom: 3,
-  },
-  sessionName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.text,
-    fontFamily: Fonts.serif,
-    marginBottom: 2,
-  },
-  sessionFocus: {
-    fontSize: 11,
-    fontFamily: Fonts.mono,
-    letterSpacing: 1,
-  },
-  sessionCardRight: {
-    alignItems: 'flex-end',
-  },
-  sessionDuration: {
-    fontSize: 20,
-    fontWeight: '700',
-    fontFamily: Fonts.mono,
-  },
-  sessionDurationLabel: {
-    fontSize: 9,
-    color: Colors.textDim,
-    fontFamily: Fonts.mono,
-    letterSpacing: 1,
-  },
-  sessionProgress: {
-    fontSize: 11,
-    color: Colors.textMuted,
-    fontFamily: Fonts.mono,
-    marginTop: 4,
+    paddingTop: 4,
   },
 
   // Prep card
@@ -315,6 +220,14 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: 21,
     textAlign: 'center',
+  },
+  prepCaution: {
+    fontSize: 11,
+    color: Colors.danger,
+    fontFamily: Fonts.mono,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginTop: 10,
   },
 
   // Active card
@@ -507,73 +420,5 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     fontFamily: Fonts.mono,
     fontWeight: '700',
-  },
-
-  // Day off — beach rest screen
-  beachCard: {
-    alignItems: 'center',
-    paddingVertical: 36,
-    paddingHorizontal: 24,
-    backgroundColor: 'rgba(78,205,196,0.10)',
-    borderRadius: 18,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(78,205,196,0.35)',
-  },
-  beachArt: {
-    fontSize: 52,
-    marginBottom: 14,
-  },
-  beachTitle: {
-    fontSize: 22,
-    color: Colors.text,
-    fontWeight: '700',
-    fontFamily: Fonts.serif,
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  beachSubtitle: {
-    fontSize: 13,
-    color: Colors.textMuted,
-    fontFamily: Fonts.mono,
-    marginBottom: 22,
-    textAlign: 'center',
-  },
-  unskipBtn: {
-    backgroundColor: Colors.stretch,
-    borderRadius: 10,
-    paddingHorizontal: 22,
-    paddingVertical: 10,
-  },
-  unskipBtnText: {
-    color: '#000',
-    fontSize: 13,
-    fontFamily: Fonts.mono,
-    fontWeight: '700',
-  },
-
-  // Tips
-  tipsCard: {
-    backgroundColor: Colors.bg,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 12,
-    padding: 13,
-    paddingHorizontal: 15,
-  },
-  tipsLabel: {
-    fontSize: 10,
-    letterSpacing: 3,
-    color: Colors.textFaint,
-    fontFamily: Fonts.mono,
-    marginBottom: 6,
-  },
-  tipItem: {
-    color: Colors.textMuted,
-    fontSize: 11,
-    lineHeight: 22,
-  },
-  tipHighlight: {
-    color: Colors.text,
   },
 });

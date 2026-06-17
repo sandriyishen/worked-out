@@ -26,32 +26,73 @@ Every product decision should orbit this idea. If a feature makes the app feel l
 
 ```
 app/                        # Expo Router — each file is a screen
-  _layout.tsx               # Root Stack with StatusBar
+  _layout.tsx               # Root Stack + WorkoutHistoryProvider (shared state)
   index.tsx                 # Main screen: wires state + renders tabs
+  library.tsx               # Exercise library browser (#4): search + type/equipment filters +
+                            #   complaint/goal filter via CategoryGroupPicker (#46), expandable
+                            #   cards w/ areas + contraindications. Opened from Settings (#46)
+  quick-session.tsx         # Quick session (#5): pick a complaint + time → generate & run
+                            #   on the spot (⚡ Quick Session button in the workout tab, #46);
+                            #   records to history via shared context
 
 src/
   types/index.ts            # Single source of truth for all TS types
   theme/index.ts            # Colors, font families as constants
-  storage/index.ts          # Thin AsyncStorage wrapper (loadState/saveState)
+  storage/index.ts          # Thin AsyncStorage wrapper (loadState/saveState/loadPlan/savePlan)
+  state/
+    WorkoutHistoryContext.tsx # Shares one useWorkoutHistory instance app-wide so the main +
+                            #   quick-session screens read/write the same calendar/settings live
 
   data/
-    sessions.ts             # 5 built-in WorkoutSessions (full library metadata each) +
-                            #   buildDaySessions(n): generic Session 1…N by cycling built-ins
-    exerciseLibrary.ts      # Flat list of all exercises + query helpers;
-                            #   fitSessionToBudget() trims/extends a session to a time budget
+    builtInExercises.ts     # BUILT_IN_EXERCISES: the 30 original curated exercise defs (flat
+                            #   library data since #38 Phase A)
+    sessionGenerator.ts     # The selection engine (#38 Phase C): generateDayPlan() builds N
+                            #   themed sessions from the ranked, equipment-filtered library
+                            #   (focus quota + posture staple + budget fill + alternation,
+                            #   seeded for shuffle); guarantees pinned exercises (#2);
+                            #   planSignature(); generateQuickSession() (#5 core)
+    ranking.ts              # Pure exercise ranking score (#38 Phase B): efficacy + ease +
+                            #   popularity + focus-match (+ additive favorite boost, #2), tunable
+                            #   weights; exerciseCompletionCounts() (#27, per-exercise tallies from
+                            #   SessionRun.exerciseIds) + exercisePopularity() (normalised from it)
+    exerciseLibrary.ts      # EXERCISE_LIBRARY = de-duped(BUILT_IN_EXERCISES +
+                            #   STANDALONE_EXERCISES) — single source of truth; owns PREP_SECS;
+                            #   getExerciseById(); query helpers; CATEGORY_LABELS / CATEGORY_GROUPS
+    standaloneExercises.ts  # STANDALONE_EXERCISES: library-grown content (#26), merged into
+                            #   EXERCISE_LIBRARY so it's reachable when building sessions (not
+                            #   library-only). Authored in #26 Phase 2 behind a human-review gate
+    __tests__/              # Jest unit tests for the data/algorithm layer (#29)
 
   hooks/
     useWorkoutTimer.ts      # Phase machine: idle → prep → active → done
                             #   Handles bilateral switch cues, pause, reset
-    useWorkoutHistory.ts    # Calendar state, completion tracking, day-off + weekly
-                            #   skip-day logic (skipDays/skipOverrides, unskipToday)
+    useWorkoutHistory.ts    # Calendar state, completion tracking, day-off + weekly skip-day
+                            #   logic; settings incl. equipment (#28) + focusAreas (#38) +
+                            #   pinned/favorite exercise ids (#2); togglePin() / toggleFavorite()
+    useSessionPlan.ts       # Owns the persisted generated plan (#38 Phase C): rehydrate,
+                            #   regenerate on profile-signature change (incl. pins/favorites, #2),
+                            #   shuffle()
 
   components/
-    Header.tsx              # App title + session color accent + Settings button
-    SettingsPanel.tsx       # Sessions/day + duration steppers, skip-day chips, day-off toggle
-    SessionTabBar.tsx       # Horizontal scrolling session pill tabs (generic Session 1…N)
-    WorkoutTab.tsx          # Workout view: prep/active/done cards, exercise list, beach rest screen
-    ExerciseList.tsx        # Expandable exercise cards (no diagrams)
+    Header.tsx              # App title + session color accent + Settings (⚙) button only (#46:
+                            #   library moved into Settings, quick session into the workout tab)
+    Collapsible.tsx         # Reusable collapsible section (header + summary + chevron → body),
+                            #   shared by Settings sections and CategoryGroupPicker (#46)
+    CategoryGroupPicker.tsx # Shared issues/goals selector (#46): the big CATEGORY_GROUPS each
+                            #   expand to reveal their category chips; used by Settings + library
+    SettingsPanel.tsx       # "Exercise Setup" — collapsible sections (sessions/day, duration,
+                            #   skip days, equipment (#28), Issues/Focus via CategoryGroupPicker)
+                            #   + a Library button (#46) + a General placeholder. (Skip-today moved
+                            #   to the workout tab; focus chips grouped per #38 Phase C)
+    SessionAccordion.tsx    # Workout tab: big ⚡ Quick Session / 🌴 Skip Today action buttons at top
+                            #   (#46) + day counter + collapsible session rows (#25) over the
+                            #   generated plan + Shuffle button (#38) + beach rest screen + pro tips
+    SessionRow.tsx          # One collapsible session row header: name, total time, today's run count (#25)
+    SessionRunner.tsx       # Expanded-row run controls: prep/active/done cards + start + exercise list
+    ExerciseList.tsx        # Expandable exercise cards (no diagrams) + per-row favorite/pin toggles
+                            #   when idle/done (#2); pinned/favorite badges always shown
+    ExerciseToggles.tsx     # Shared ★ favorite + 📌 pin toggle pair (#2); used by library cards
+                            #   and ExerciseList rows
     CalendarTab.tsx         # Monthly calendar grid + stats
 ```
 
@@ -71,6 +112,9 @@ interface Exercise {
   bilateral?: boolean;
   switchAt?: number;
   reps?: string;
+  contraindications?: string;       // optional "stop if it hurts" safety note (#31)
+  efficacy?: number;                // editorial 1–5 (ranking signal, #38 Phase B); neutral default if unset
+  difficulty?: number;              // editorial 1–5; ease = 6 − difficulty (ranking signal, #38 Phase B)
 
   // Library metadata (powers features #4 and #5)
   categories: ExerciseCategory[];   // e.g. ['back_pain', 'carpal_tunnel']
@@ -83,57 +127,164 @@ interface DayRecord {
   sessionsCompleted: number;
   status: 'completed' | 'partial' | 'dayoff' | 'missed';
   completedSessionIds: number[];
-  sessionRuns: SessionRun[];        // tracks repeat completions (feature #3)
+  sessionRuns: SessionRun[];        // each completion (#3); SessionRun carries exerciseIds (#38)
 }
 
 interface AppSettings {
-  dailyTarget: number;              // sessions per day (1–10); drives the Session 1…N count
-  sessionDurationMinutes?: number;  // undefined = Auto (full session); else a time budget
+  dailyTarget: number;              // sessions per day (1–10); drives the number of generated sessions
+  sessionDurationMinutes?: number;  // undefined = Auto (default budget); else a per-session time budget
   skipDays?: number[];              // recurring rest weekdays, 0=Sun … 6=Sat
   skipOverrides?: string[];         // YYYY-MM-DD dates where a recurring skip is cancelled
+  availableEquipment?: Equipment[]; // equipment the user has (#28); filters the generator pool + library
+  focusAreas?: ExerciseCategory[];  // categories to target (#38 Phase C); feeds the generator
+  pinnedExerciseIds?: string[];     // exercises guaranteed into the generated plan, surviving shuffle (#2)
+  favoriteExerciseIds?: string[];   // bookmarked exercises; soft ranking boost + library filter (#2)
 }
+
+// The persisted, generated session plan (#38 Phase C) — stored under its own key.
+interface PlannedSession { name: string; emoji: string; focus: string; color: string; exerciseIds: string[]; }
+interface SessionPlan { signature: string; seed: number; sessions: PlannedSession[]; }
 ```
 
-`SessionRun[]` already stores every individual completion with a timestamp, so feature #3 (repeat tracking) only needs UI work — the data layer is ready.
+`SessionRun` records each completion with a timestamp **and the `exerciseIds` actually run** (#38), so
+popularity (#38) and the per-exercise counter (#27) derive exactly from history.
 
-The `exerciseLibrary.ts` file exports helper functions (`getExercisesByCategory`, `getExercisesByArea`) that will be the foundation of the quick-session algorithm in feature #5.
+The session plan is **generated, not curated** (#38 Phase C): `sessionGenerator.generateDayPlan()` selects
+from the ranked library and `useSessionPlan` persists the result, regenerating only when the profile
+signature changes or the user shuffles. The old hand-authored `SESSIONS` are gone.
 
 ---
 
 ## Planned Features — Architectural Notes
 
 ### Feature 1: Configurable sessions per day / duration — ✅ Implemented
-- `AppSettings.dailyTarget` (1–10) now drives **how many** sessions a day has. `buildDaySessions(n)`
-  in `sessions.ts` cycles the built-in sessions into a generic `Session 1…N` list.
-- `AppSettings.sessionDurationMinutes` is a per-session time budget (Auto when unset).
-  `fitSessionToBudget()` in `exerciseLibrary.ts` trims the exercise list to fit, or extends it
-  with category-matched exercises from the library when the budget exceeds the session.
+- `AppSettings.dailyTarget` (1–10) drives **how many** sessions the generator produces.
+- `AppSettings.sessionDurationMinutes` is a per-session time budget (Auto → a default budget when
+  unset); the generator (`sessionGenerator.ts`) sizes each session to it directly (the old
+  `fitSessionToBudget` trim/extend pass was superseded in #38 Phase C).
 - **Weekly skip days** were added alongside (beyond the original plan): `skipDays` mark recurring
   rest weekdays, `skipOverrides` cancel a skip for one date. Off days (manual or skip) replace the
   workout with a beach rest screen + "Un-skip today" (`unskipToday` in `useWorkoutHistory`).
 
-### Feature 2: Exercise customization per session
-- Add `isCustom?: boolean` and an optional `customExercises?: Exercise[]` to `WorkoutSession`
-- Store custom sessions under a new `customSessions` key in `PersistedState`
-- The exercise library browser (feature #4) is the pick interface
+### Session runner redesign: collapsible accordion (#25) — ✅ Implemented
+- The top horizontal session pill bar (`SessionTabBar`) is **gone**. The workout tab is now a
+  **vertical accordion** of collapsible session rows (`SessionAccordion` → `SessionRow` +
+  `SessionRunner`). One row is open at a time (true accordion); the expanded row is the active,
+  timer-bound session.
+- Collapsed `SessionRow` shows the session name, **total time** (summed from the plan's
+  exercises), and **today's completion count** for that slot (from
+  `DayRecord.sessionRuns`). Expanding resets the single `useWorkoutTimer` and binds it to that
+  session; collapsing / "Next Session" reset it too, so a half-run session never bleeds across rows.
+- `app/index.tsx` tracks `expanded: number | null` (was `activeSession`). The runner body (prep/
+  active/done/start + `ExerciseList`) was extracted from the old `WorkoutTab` into `SessionRunner`;
+  the beach rest screen + pro tips moved into `SessionAccordion`. `SessionTabBar` and `WorkoutTab`
+  were deleted.
 
-### Feature 3: Repeat session tracking
-- Already supported at the data layer — `DayRecord.sessionRuns` records each completion
-- UI change: don't mark a session pill as "done" after first completion; instead show a count badge
-- Calendar stats would sum `sessionRuns.length` per day, not `completedSessionIds.size`
+### Feature 2: Favorite & pin exercises (merged #2 + #33) — ✅ Implemented
+The original "swap/modify exercises within a session" was **re-scoped** after #38 deleted the
+curated sessions: sessions are now a generated, persisted `SessionPlan`, so there's no stable
+session to edit. Instead the user shapes the routine by **favoriting** and **pinning individual
+exercises**, which fits the generated-plan model cleanly. This merges #33.
+- **Pin (hard):** a pinned exercise is *guaranteed* to appear in the day's plan and survives
+  shuffle / profile changes; only its session placement & order vary on shuffle.
+- **Favorite (soft):** a bookmark — filterable in the library and given a **ranking boost** so it
+  shows up more often (no guarantee).
+- **State lives in `AppSettings`** (`pinnedExerciseIds` / `favoriteExerciseIds`), persisted via
+  `useWorkoutHistory` (`togglePin` / `toggleFavorite`, exposed through the shared context). Storing
+  it in settings — not the ephemeral plan — is why "survive shuffle" is automatic (no slot-keying).
+- **Generator (`sessionGenerator.ts`):** `GeneratorProfile` carries pinned/favorite ids; both join
+  `planSignature` (toggling refreshes the plan). Pinned ids are resolved straight from the library
+  (bypassing the equipment filter — explicit intent), seed-shuffled, round-robin-distributed across
+  sessions, and force-added once (guaranteed, never duplicated). Favorites feed `ranking.ts`'s
+  additive `favorite` weight.
+- **UI:** shared `ExerciseToggles` (★ + 📌) on every library card (+ a "Favorites only" filter) and
+  every workout-view `ExerciseList` row (toggles shown when idle/done, since pinning regenerates the
+  plan; badges always visible). The library now consumes the shared `WorkoutHistoryContext`.
+- **Deferred:** literal in-session swap/modify (the old #2 scope) — file a fresh issue if wanted.
 
-### Feature 4: Exercise library screen
-- New Expo Router screen: `app/library.tsx`
-- Read from `EXERCISE_LIBRARY` in `exerciseLibrary.ts`
-- Filter controls: category chips (back pain, neck, carpal tunnel, etc.) + equipment filter
-- Each exercise card links to detail view and has "Add to session" action
+### Feature 3: Repeat session tracking — ✅ Implemented
+- Every completion counts, including repeats of the same session. `markSessionComplete`
+  (`useWorkoutHistory`) now sets `DayRecord.sessionsCompleted = sessionRuns.length` and derives the
+  day `status` (`partial`/`completed`) from the **run count vs `dailyTarget`** — not from distinct
+  `completedSessionIds`. The `completedSessionIds` set is still kept/persisted as "which sessions
+  were run at least once," but no longer gates the daily total.
+- UI: the day-progress line + done card (`sessionsDone`) read today's `sessionRuns.length`; the
+  collapsed `SessionRow` shows the per-session "✓ N× today" badge (added in #25); the calendar
+  appends the run count to a day's status glyph on multi-run days (e.g. `✓ 3`).
 
-### Feature 5: Quick session generator
-- New screen: `app/quick-session.tsx`
-- Input: complaint (ExerciseCategory) + duration in minutes
-- Algorithm in `exerciseLibrary.ts → generateQuickSession(complaint, durationMin)`
-- Algorithm selects exercises from the library matching the category, fitting within time budget
-- Run the generated session using the existing `useWorkoutTimer` hook — no new timer logic needed
+### Feature 4: Exercise library screen — ✅ Implemented
+- `app/library.tsx` — reached from the **Library button in Settings** (#46);
+  `router.push('/library')`.
+- Reads `EXERCISE_LIBRARY` (de-duped `built-in session exercises + STANDALONE_EXERCISES`;
+  standalone content lives in `data/standaloneExercises.ts`, authored by #26).
+- Filters: free-text search, type (work/stretch), equipment (multi-select, **defaults to the
+  #28 saved profile**; no-equipment exercises always show), and a complaint/goal filter via the
+  shared `CategoryGroupPicker` — big groups that expand to reveal categories (#46), mirroring
+  Settings. Empty state when nothing matches.
+- Expandable cards show type/duration/equipment + category chips; the detail adds target areas
+  and the `contraindications` note (#31) when set. (The "appears in N built-in sessions" line was
+  removed in #38 Phase C, when the curated sessions went away.)
+- Each card carries the shared `ExerciseToggles` (★ favorite + 📌 pin) and badges, plus a
+  "Favorites only" filter (#2); the screen consumes the shared `WorkoutHistoryContext`.
+- Each card shows an all-time **"✓ N× done"** counter (#27) derived from history via
+  `exerciseCompletionCounts(calData)` (counts `SessionRun.exerciseIds`); updates live as
+  sessions containing the exercise are completed.
+
+### Catalogue & safety groundwork — 🚧 In progress (Phase 1: #26 / #31 / #29)
+- **#31 (shipped in this branch):** `Exercise.contraindications?: string` — optional
+  "stop if it hurts" note; render in the library detail and optionally the runner prep card.
+- **#26 (authored content — expert safety review tracked for before app-store listing, #36):**
+  `STANDALONE_EXERCISES` (~56 entries) de-dup-merged into `EXERCISE_LIBRARY` (built-ins win
+  on id collision). The `ExerciseCategory` union grew to **30 categories** (complaint, strength,
+  sculpting/fat-target, wellness) and `BodyArea` gained `arms`/`glutes`/`calves`/`ankles`/`eyes`;
+  `CATEGORY_LABELS` covers every key. Coverage: **85 library exercises, every category ≥3**,
+  each with a work/stretch mix and a `contraindications` note where a movement could aggravate
+  a condition. Category set was **developer-approved** first; content is quasi-medical. An expert
+  reviewer isn't available yet, so the review (#36) does **not** block `main` — it's a backlog item
+  to clear **before listing the app on an app store**.
+- **#29 (shipped in this branch):** Jest (`jest-expo` preset) unit-test harness for the
+  pure data/algorithm functions, incl. catalogue coverage + content-conformance tests. See the
+  Testing convention below.
+
+### Feature 5: Quick session generator — ✅ Implemented
+- **Engine (#38 Phase C):** `sessionGenerator.generateQuickSession(category, durationMin, popularity?,
+  equipment?, seed?)` — the daily generator with N=1, returning budget-fit `Exercise[]`.
+- **Screen (`app/quick-session.tsx`):** reached via the big **⚡ Quick Session** button at the top
+  of the workout tab (#46). Pick a complaint
+  (grouped single-select chips) + a time (5 / 10 / 15 min presets + a custom stepper); equipment is
+  pulled silently from the #28 profile. "Let's do this!" generates and runs it inline via the
+  existing `SessionRunner` (in `quick` mode) + `useWorkoutTimer`; "🔀 New picks" reshuffles (new seed).
+- **History:** completion calls `markSessionComplete(-1, exerciseIds)` — a sentinel slot id, so it
+  lands in `sessionRuns`/calendar and feeds popularity (#3/#38) without matching any plan-row badge.
+- **Shared state:** the screen reads/writes the **same** `useWorkoutHistory` via
+  `WorkoutHistoryContext`, so a completed quick session shows live on the main screen's calendar.
+
+### Epic #38: Generate daily sessions from the unified library (ranking + coverage)
+- **Phase A — invert data ownership (✅ shipped, behavior-preserving):** exercise definitions
+  now live in the library, not in sessions. The 30 built-in defs moved to
+  `data/builtInExercises.ts`; `EXERCISE_LIBRARY` is `de-duped(BUILT_IN_EXERCISES +
+  STANDALONE_EXERCISES)` (no longer derived from `SESSIONS`). Curated sessions are
+  `SESSION_PRESETS` — metadata + ordered exercise-id lists — hydrated into `SESSIONS` by
+  `getExerciseById` (session `exercises` share library object identity; no duplicated data).
+  `PREP_SECS` now lives in `exerciseLibrary.ts` (re-exported from `sessions.ts` for the runner).
+  No user-visible change; `tsc` + Jest green.
+- **Phase B — ranking (✅ shipped):** `Exercise.efficacy?`/`difficulty?` added (optional; the
+  ranker falls back to neutral/by-type defaults — per-exercise seed values + weights remain an
+  open decision). Pure `src/data/ranking.ts` exposes `scoreExercise`/`rankExercises` with tunable
+  `RANKING_WEIGHTS` (score = efficacy + ease + popularity + focus-match, each normalised 0–1).
+  History-derived `exercisePopularity(calData)` lives in `ranking.ts` (pure; reads
+  `SessionRun.exerciseIds` — see Phase C — the same derivation #27 needs). Unit-tested.
+- **Phase C — generator + coverage (✅ shipped):** the curated `SESSIONS` are **gone**; the day's
+  sessions are now **generated and persisted**. `sessionGenerator.generateDayPlan(profile, popularity,
+  seed)` builds N themed sessions from the ranked, equipment-filtered library — min-quota per focus
+  area (with related-category fallback), a posture/anti-sitting staple, score-fill to the time budget,
+  work/stretch alternation, no in-session dup, minimal cross-session overlap; seeded so **Shuffle**
+  varies the picks. `AppSettings.focusAreas` (grouped picker in Settings) drives the focus round-robin.
+  `useSessionPlan` persists the plan and regenerates **only** when the profile signature (focus /
+  equipment / target / duration) changes or the user shuffles — so the routine is stable day to day.
+  `SessionRun.exerciseIds` is recorded on completion to make popularity (and #27) exact. One engine
+  powers both daily and quick sessions (`generateQuickSession` = N=1). **Open decisions deferred:**
+  per-exercise efficacy/difficulty seeds and the scoring weights (neutral defaults for now).
 
 ---
 
@@ -143,7 +294,9 @@ The `exerciseLibrary.ts` file exports helper functions (`getExercisesByCategory`
 - **No accounts, no cloud.** All data lives in `AsyncStorage`. Keep it that way unless the user explicitly requests sync.
 - **Relative imports only.** No `@/` path aliases — keeps babel config simple.
 - **StyleSheet.create** for all styles; no inline objects except for dynamic values (session color, progress width).
-- **One hook per concern.** Timer logic in `useWorkoutTimer`, history/persistence in `useWorkoutHistory`. Keep them separate.
+- **One hook per concern.** Timer logic in `useWorkoutTimer`, history/persistence in `useWorkoutHistory`, the generated plan in `useSessionPlan`. Keep them separate. `useWorkoutHistory` is shared app-wide through `WorkoutHistoryContext` (provided in `_layout.tsx`) so multiple screens stay in sync — consume it via `useWorkoutHistoryContext()`, don't call the hook twice.
+- **Unit tests for pure logic.** Data/algorithm functions (the session generator + `planSignature`, `EXERCISE_LIBRARY` composition, ranking/`exercisePopularity`, catalogue coverage) get Jest tests under `src/**/__tests__/*.test.ts`. Run with `npm test`. `tsc --noEmit` remains the type guardrail; jest globals are enabled via `"types": ["jest"]` in `tsconfig.json`.
+- **AI-authored exercise content needs an expert safety review** (movement cues are quasi-medical) — tracked in **#36**. No qualified reviewer is available at present, so this does **not** block `dev → main`; it's a backlog gate that must be cleared **before listing the app on an app store**. New library content still goes in `data/standaloneExercises.ts`.
 - **Keep root docs current.** Any change that alters user-facing behavior, the data model, file structure, build steps, or dependencies must update the affected root Markdown in the *same* change — never as a follow-up. `README.md` (features + project structure), `CLAUDE.md` (architecture, data model, conventions, planned-feature status), and `DEPENDENCIES.md` (build/toolchain versions). When a planned feature ships, move it out of "Planned" in both `README.md` and `CLAUDE.md`.
 - **The philosophy test.** Before adding any feature, ask: does this make it easier to move for 3 minutes right now?
 
@@ -210,6 +363,7 @@ tech-debt) is an item with three custom fields:
 npm install
 npx expo start --android     # run on Android device/emulator
 npx expo start               # open Expo Go QR code
+npm test                     # run the Jest unit-test suite
 ```
 
 ## Building an APK
