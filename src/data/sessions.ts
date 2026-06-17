@@ -1,4 +1,4 @@
-import { WorkoutSession } from '../types';
+import { CalendarData, WorkoutSession } from '../types';
 import { getExerciseById } from './exerciseLibrary';
 
 // PREP_SECS is owned by the library (it's the per-exercise time cost) but has
@@ -109,4 +109,35 @@ export function buildDaySessions(count: number): WorkoutSession[] {
 /** Built-in sessions whose exercise list contains the given exercise id. */
 export function sessionsContainingExercise(id: string): WorkoutSession[] {
   return SESSIONS.filter(s => s.exercises.some(e => e.id === id));
+}
+
+/** The preset a session slot maps to: slot `i` cycles the built-ins (`i % 5`). */
+function presetForSlot(slot: number): WorkoutSession {
+  return SESSIONS[((slot % SESSIONS.length) + SESSIONS.length) % SESSIONS.length];
+}
+
+/**
+ * Derives a normalised (0–1) popularity per exercise id from completion history
+ * (#38 Phase B; the same derivation #27's per-exercise counter needs).
+ *
+ * Each `SessionRun` records a completed session *slot*, not its exercises, so we
+ * attribute a run to the exercises of the preset that slot maps to. This assumes
+ * the full preset ran (it ignores duration-budget trimming), which is a fine
+ * signal for ranking. The most-completed exercise scores 1; an empty history
+ * yields an empty map (every exercise then reads 0 in `scoreExercise`).
+ */
+export function exercisePopularity(calData: CalendarData): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const day of Object.values(calData)) {
+    for (const run of day.sessionRuns ?? []) {
+      for (const ex of presetForSlot(run.sessionId).exercises) {
+        counts.set(ex.id, (counts.get(ex.id) ?? 0) + 1);
+      }
+    }
+  }
+  const max = Math.max(0, ...counts.values());
+  if (max === 0) return new Map();
+  const popularity = new Map<string, number>();
+  for (const [id, count] of counts) popularity.set(id, count / max);
+  return popularity;
 }

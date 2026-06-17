@@ -42,7 +42,9 @@ src/
     sessions.ts             # SESSION_PRESETS (metadata + ordered exercise-id lists) hydrated
                             #   into SESSIONS via getExerciseById; re-exports PREP_SECS;
                             #   buildDaySessions(n): generic Session 1…N by cycling built-ins;
-                            #   sessionsContainingExercise()
+                            #   sessionsContainingExercise(); exercisePopularity() (#38 Phase B)
+    ranking.ts              # Pure exercise ranking score (#38 Phase B): efficacy + ease +
+                            #   popularity + focus-match, with tunable weights (powers #5 / Phase C)
     exerciseLibrary.ts      # EXERCISE_LIBRARY = de-duped(BUILT_IN_EXERCISES +
                             #   STANDALONE_EXERCISES) — single source of truth; owns PREP_SECS;
                             #   getExerciseById(); query helpers;
@@ -86,6 +88,8 @@ interface Exercise {
   switchAt?: number;
   reps?: string;
   contraindications?: string;       // optional "stop if it hurts" safety note (#31)
+  efficacy?: number;                // editorial 1–5 (ranking signal, #38 Phase B); neutral default if unset
+  difficulty?: number;              // editorial 1–5; ease = 6 − difficulty (ranking signal, #38 Phase B)
 
   // Library metadata (powers features #4 and #5)
   categories: ExerciseCategory[];   // e.g. ['back_pain', 'carpal_tunnel']
@@ -202,8 +206,13 @@ The `exerciseLibrary.ts` file exports helper functions (`getExercisesByCategory`
   `getExerciseById` (session `exercises` share library object identity; no duplicated data).
   `PREP_SECS` now lives in `exerciseLibrary.ts` (re-exported from `sessions.ts` for the runner).
   No user-visible change; `tsc` + Jest green.
-- **Phase B — ranking (planned):** add `Exercise.efficacy?`/`difficulty?`; history-derived
-  popularity from `DayRecord.sessionRuns`; score = weighted efficacy + ease + popularity + focus match.
+- **Phase B — ranking (✅ shipped):** `Exercise.efficacy?`/`difficulty?` added (optional; the
+  ranker falls back to neutral/by-type defaults — per-exercise seed values + weights remain an
+  open decision). Pure `src/data/ranking.ts` exposes `scoreExercise`/`rankExercises` with tunable
+  `RANKING_WEIGHTS` (score = efficacy + ease + popularity + focus-match, each normalised 0–1).
+  History-derived `exercisePopularity(calData)` lives in `sessions.ts` (it maps a `SessionRun`
+  slot → its preset's exercises; the same derivation #27 needs). Ranking is **not yet wired into
+  any screen** — it's the engine Phase C / #5 will consume. Unit-tested.
 - **Phase C — generator + coverage (planned):** add `AppSettings.focusAreas`; replace
   `buildDaySessions`'s `i % 5` cycling with a deterministic, coverage-quota'd generator; synthesize
   session themes. One engine shared with #5.

@@ -86,6 +86,7 @@ src/
     builtInExercises.ts # Curated built-in exercise definitions (flat library data)
     sessions.ts         # Session presets (id-lists) + buildDaySessions() (generic per-day list)
     exerciseLibrary.ts  # Exercise catalogue (single source of truth) + fitSessionToBudget()
+    ranking.ts          # Pure exercise ranking score (efficacy/ease/popularity/focus)
     standaloneExercises.ts # Library-grown exercises, merged into the catalogue
     __tests__/          # Jest unit tests for the data/algorithm layer
   hooks/
