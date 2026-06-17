@@ -69,6 +69,17 @@ export interface Exercise {
    * Absent for exercises with no specific contraindication.
    */
   contraindications?: string;
+  /**
+   * Editorial efficacy rating 1–5 (higher = more effective for its categories).
+   * Feeds the ranking score (#38 Phase B). Optional — the ranker falls back to a
+   * neutral default when unset; per-exercise seed values are an open decision.
+   */
+  efficacy?: number;
+  /**
+   * Editorial difficulty 1–5 (higher = harder). The ranker uses ease = 6 − difficulty.
+   * Optional — defaults by exercise type when unset (#38 Phase B).
+   */
+  difficulty?: number;
   categories: ExerciseCategory[];
   targetAreas: BodyArea[];
   equipment: Equipment;
