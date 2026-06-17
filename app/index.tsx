@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 import { buildDaySessions } from '../src/data/sessions';
 import { fitSessionToBudget } from '../src/data/exerciseLibrary';
@@ -16,6 +17,7 @@ import { Colors, Fonts } from '../src/theme';
 type Tab = 'workout' | 'calendar';
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('workout');
   const [activeSession, setActiveSession] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
@@ -90,6 +92,7 @@ export default function HomeScreen() {
           session={session}
           showSettings={showSettings}
           onToggleSettings={() => setShowSettings(s => !s)}
+          onOpenLibrary={() => router.push('/library')}
         />
         {showSettings && (
           <SettingsPanel

@@ -157,3 +157,16 @@ export const CATEGORY_LABELS: Record<ExerciseCategory, string> = {
   balance: 'Balance',
   energizing: 'Energizing',
 };
+
+export const EQUIPMENT_LABELS: Record<Equipment, string> = {
+  none: 'No equipment',
+  chair: 'Chair',
+  desk: 'Desk',
+  wall: 'Wall',
+  doorframe: 'Doorframe',
+};
+
+/** Built-in sessions whose exercise list contains the given exercise id. */
+export function sessionsContainingExercise(id: string): WorkoutSession[] {
+  return SESSIONS.filter(s => s.exercises.some(e => e.id === id));
+}

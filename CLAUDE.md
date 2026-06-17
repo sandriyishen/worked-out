@@ -28,6 +28,8 @@ Every product decision should orbit this idea. If a feature makes the app feel l
 app/                        # Expo Router — each file is a screen
   _layout.tsx               # Root Stack with StatusBar
   index.tsx                 # Main screen: wires state + renders tabs
+  library.tsx               # Exercise library browser (#4): search + type/equipment/category
+                            #   filters, expandable cards w/ areas + contraindications
 
 src/
   types/index.ts            # Single source of truth for all TS types
@@ -129,14 +131,17 @@ The `exerciseLibrary.ts` file exports helper functions (`getExercisesByCategory`
 - UI change: don't mark a session pill as "done" after first completion; instead show a count badge
 - Calendar stats would sum `sessionRuns.length` per day, not `completedSessionIds.size`
 
-### Feature 4: Exercise library screen
-- New Expo Router screen: `app/library.tsx`
-- Read from `EXERCISE_LIBRARY` in `exerciseLibrary.ts` (now de-duped `built-in
-  session exercises + STANDALONE_EXERCISES`; standalone content lives in
-  `data/standaloneExercises.ts` and is authored by #26).
-- Filter controls: category chips (back pain, neck, carpal tunnel, etc.) + equipment filter
-- Each exercise card links to detail view and has "Add to session" action
-- Show `contraindications` (when set) in the card detail.
+### Feature 4: Exercise library screen — ✅ Implemented
+- `app/library.tsx` — reached from the 📚 button in `Header`; `router.push('/library')`.
+- Reads `EXERCISE_LIBRARY` (de-duped `built-in session exercises + STANDALONE_EXERCISES`;
+  standalone content lives in `data/standaloneExercises.ts`, authored by #26).
+- Filters: free-text search, type (work/stretch), equipment (multi-select, **defaults to the
+  #28 saved profile**; no-equipment exercises always show), and category multi-select from
+  `CATEGORY_LABELS`. Empty state when nothing matches.
+- Expandable cards show type/duration/equipment + category chips; the detail adds target areas,
+  "appears in N built-in sessions" (`sessionsContainingExercise`), and the `contraindications`
+  note (#31) when set.
+- **Deferred:** the "Add to session" action waits on #2 (custom sessions) — not built yet.
 
 ### Catalogue & safety groundwork — 🚧 In progress (Phase 1: #26 / #31 / #29)
 - **#31 (shipped in this branch):** `Exercise.contraindications?: string` — optional

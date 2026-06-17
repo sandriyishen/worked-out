@@ -29,6 +29,7 @@ The goal is to make movement the path of least resistance — something you do i
 - **Calendar view** showing completion history with done / partial / missed / day-off status
 - **Weekly skip days & Day Off** — pick recurring rest weekdays or mark today off; rest days show a beach screen with one-tap un-skip
 - **Equipment profile** — tell the app what you have (chair, desk, wall, doorframe) to tailor the exercise library and quick sessions
+- **Exercise library** — browse the full catalogue, filter by complaint/goal, equipment, or type, search by name, and see each exercise's target areas and safety notes
 
 ---
 
@@ -36,8 +37,7 @@ The goal is to make movement the path of least resistance — something you do i
 
 1. **Exercise customization** — swap or modify individual exercises within any session
 2. **Repeat tracking** — do the same session twice in a day and have both runs counted in history
-3. **Exercise library** — browse the full catalogue of exercises, filtered by complaint (back pain, stiff neck, carpal tunnel relief, etc.) and body area
-4. **Quick sessions** — specify a complaint and a time budget; the app generates a targeted stretch or workout session on the spot
+3. **Quick sessions** — specify a complaint and a time budget; the app generates a targeted stretch or workout session on the spot
 
 ---
 
@@ -76,6 +76,7 @@ npx eas-cli@latest build --platform android --profile preview
 app/                    # Expo Router screens
   _layout.tsx           # Root stack layout
   index.tsx             # Main workout screen
+  library.tsx           # Exercise library browser (filters + search + detail)
 src/
   types/index.ts        # All TypeScript interfaces
   theme/index.ts        # Colors and font constants
