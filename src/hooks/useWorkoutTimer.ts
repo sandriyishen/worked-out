@@ -19,9 +19,15 @@ export interface WorkoutTimerAPI {
 interface Props {
   exercises: Exercise[];
   onSessionComplete: () => void;
+  /**
+   * Fired when an individual exercise's active timer finishes (#53) — including the
+   * last one before the session completes. Not fired when the user stops mid-exercise
+   * (reset), so it records only exercises actually finished.
+   */
+  onExerciseComplete?: (exerciseId: string) => void;
 }
 
-export function useWorkoutTimer({ exercises, onSessionComplete }: Props): WorkoutTimerAPI {
+export function useWorkoutTimer({ exercises, onSessionComplete, onExerciseComplete }: Props): WorkoutTimerAPI {
   const [phase, setPhase] = useState<WorkoutPhase>('idle');
   const [exIdx, setExIdx] = useState(0);
   const [timer, setTimer] = useState(0);
@@ -32,8 +38,10 @@ export function useWorkoutTimer({ exercises, onSessionComplete }: Props): Workou
   const switchFiredRef = useRef(false);
   const pausedRef = useRef(false);
   const onCompleteRef = useRef(onSessionComplete);
+  const onExerciseCompleteRef = useRef(onExerciseComplete);
 
   useEffect(() => { onCompleteRef.current = onSessionComplete; }, [onSessionComplete]);
+  useEffect(() => { onExerciseCompleteRef.current = onExerciseComplete; }, [onExerciseComplete]);
   useEffect(() => { pausedRef.current = paused; }, [paused]);
 
   const exercise = (phase === 'active' || phase === 'prep') ? exercises[exIdx] ?? null : null;
@@ -65,6 +73,9 @@ export function useWorkoutTimer({ exercises, onSessionComplete }: Props): Workou
             setTimer(exercises[exIdx].duration);
           } else if (phase === 'active') {
             setShowSwitch(false);
+            // The active exercise just finished — record it (#53), whether or not
+            // the session as a whole completes.
+            onExerciseCompleteRef.current?.(exercises[exIdx].id);
             const next = exIdx + 1;
             if (next < exercises.length) {
               setExIdx(next);

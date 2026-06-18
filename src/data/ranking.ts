@@ -104,19 +104,29 @@ export function rankExercises(exercises: Exercise[], ctx: ScoreContext = {}): Ex
 }
 
 /**
- * Raw all-time completion count per exercise id, derived from history (#27). Reads
- * the exact `SessionRun.exerciseIds` recorded at completion (#38 Phase C); runs from
- * before Phase C carry no ids and are skipped. This is the per-exercise counter the
- * library card shows, and the basis for the normalised popularity signal below.
+ * Raw all-time completion count per exercise id, derived from history (#27/#53).
+ * The per-exercise counter the library card shows, and the basis for the normalised
+ * popularity signal below.
+ *
+ * Source per day, to avoid double-counting across the #53 transition:
+ *  - if the day has `exerciseRuns` (the #53 canonical per-exercise log, which records
+ *    every exercise the moment it finishes — even in abandoned sessions), count those;
+ *  - otherwise fall back to the legacy `SessionRun.exerciseIds` (only present on days
+ *    recorded before #53, and only for completed sessions).
+ * A completed session always produces `exerciseRuns`, so its day uses that branch and
+ * the matching `SessionRun.exerciseIds` is ignored — no double count.
  *
  * Pure (depends only on `types`), so it stays in this cycle-free module.
  */
 export function exerciseCompletionCounts(calData: CalendarData): Map<string, number> {
   const counts = new Map<string, number>();
+  const bump = (id: string) => counts.set(id, (counts.get(id) ?? 0) + 1);
   for (const day of Object.values(calData)) {
-    for (const run of day.sessionRuns ?? []) {
-      for (const id of run.exerciseIds ?? []) {
-        counts.set(id, (counts.get(id) ?? 0) + 1);
+    if (day.exerciseRuns && day.exerciseRuns.length > 0) {
+      for (const run of day.exerciseRuns) bump(run.id);
+    } else {
+      for (const run of day.sessionRuns ?? []) {
+        for (const id of run.exerciseIds ?? []) bump(id);
       }
     }
   }

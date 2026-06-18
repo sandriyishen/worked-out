@@ -115,6 +115,14 @@ export interface DayRecord {
   status: 'completed' | 'partial' | 'dayoff' | 'missed';
   completedSessionIds: number[];
   sessionRuns: SessionRun[];
+  /**
+   * Per-exercise completions recorded the moment each exercise's timer finishes,
+   * independent of whether the session was completed (#53). This is the canonical
+   * source for per-exercise counts/popularity; on days that have it, the legacy
+   * `SessionRun.exerciseIds` is ignored (see exerciseCompletionCounts). Optional for
+   * back-compat with days recorded before #53.
+   */
+  exerciseRuns?: { id: string; at: number }[];
 }
 
 export interface CalendarData {

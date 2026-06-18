@@ -41,6 +41,7 @@ export default function HomeScreen() {
     isDayOff,
     loaded,
     markSessionComplete,
+    recordExerciseDone,
     toggleDayOff,
     markTodayOff,
     updateDailyTarget,
@@ -91,6 +92,7 @@ export default function HomeScreen() {
   const timer = useWorkoutTimer({
     exercises: expandedExercises,
     onSessionComplete: handleSessionComplete,
+    onExerciseComplete: recordExerciseDone,
   });
 
   // Reset the timer whenever the plan changes (regenerate / shuffle / duration edit)
