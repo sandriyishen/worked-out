@@ -108,6 +108,27 @@ export function useWorkoutHistory() {
     });
   }, [dailyTarget, sessionDurationMinutes, persist]);
 
+  // Records a single exercise completion the moment its timer finishes (#53),
+  // independent of session completion. Appends to today's `exerciseRuns`; a day
+  // with any exercise activity reads as 'partial' until a full session bumps it.
+  const recordExerciseDone = useCallback(async (exerciseId: string) => {
+    const td = todayStr();
+    setCalData(cal => {
+      const existing: DayRecord = cal[td] ?? {
+        date: td,
+        sessionsCompleted: 0,
+        status: 'partial',
+        completedSessionIds: [],
+        sessionRuns: [],
+      };
+      const exerciseRuns = [...(existing.exerciseRuns ?? []), { id: exerciseId, at: Date.now() }];
+      const updated: DayRecord = { ...existing, exerciseRuns };
+      const newCal = { ...cal, [td]: updated };
+      persist(newCal, dailyTarget, sessionDurationMinutes);
+      return newCal;
+    });
+  }, [dailyTarget, sessionDurationMinutes, persist]);
+
   const toggleDayOff = useCallback(async (ds: string, currentStatus?: string) => {
     let newCal: CalendarData;
     if (currentStatus === 'dayoff') {
@@ -235,6 +256,7 @@ export function useWorkoutHistory() {
     isDayOff,
     loaded,
     markSessionComplete,
+    recordExerciseDone,
     togglePin,
     toggleFavorite,
     toggleDayOff,

@@ -114,6 +114,36 @@ describe('exerciseCompletionCounts', () => {
     expect(counts.get('never')).toBeUndefined();
     expect(exerciseCompletionCounts({}).size).toBe(0);
   });
+
+  it('prefers a day\'s exerciseRuns (#53) and ignores its sessionRuns — no double count', () => {
+    const calData: CalendarData = {
+      // New-style day: per-exercise log present; its sessionRuns must be ignored.
+      d1: {
+        date: 'd1',
+        sessionsCompleted: 1,
+        status: 'completed',
+        completedSessionIds: [0],
+        sessionRuns: [{ sessionId: 0, completedAt: 9, exerciseIds: ['a', 'b'] }],
+        exerciseRuns: [
+          { id: 'a', at: 1 },
+          { id: 'a', at: 2 },
+          { id: 'c', at: 3 }, // an exercise done outside a completed session
+        ],
+      },
+      // Legacy day: no exerciseRuns → falls back to sessionRuns.
+      d2: {
+        date: 'd2',
+        sessionsCompleted: 1,
+        status: 'completed',
+        completedSessionIds: [0],
+        sessionRuns: [{ sessionId: 0, completedAt: 5, exerciseIds: ['a'] }],
+      },
+    };
+    const counts = exerciseCompletionCounts(calData);
+    expect(counts.get('a')).toBe(3); // 2 (d1 exerciseRuns) + 1 (d2 legacy); d1 sessionRun ignored
+    expect(counts.get('c')).toBe(1);
+    expect(counts.get('b')).toBeUndefined(); // only in d1's ignored sessionRun
+  });
 });
 
 describe('exercisePopularity', () => {

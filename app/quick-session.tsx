@@ -20,7 +20,7 @@ const ACCENT = Colors.work;
 
 export default function QuickSessionScreen() {
   const router = useRouter();
-  const { availableEquipment, calData, markSessionComplete } = useWorkoutHistoryContext();
+  const { availableEquipment, calData, markSessionComplete, recordExerciseDone } = useWorkoutHistoryContext();
 
   const [category, setCategory] = useState<ExerciseCategory | null>(null);
   const [minutes, setMinutes] = useState(5);
@@ -45,7 +45,7 @@ export default function QuickSessionScreen() {
     markSessionComplete(QUICK_SESSION_ID, result.map(e => e.id));
   }, [markSessionComplete, result]);
 
-  const timer = useWorkoutTimer({ exercises: result, onSessionComplete: handleComplete });
+  const timer = useWorkoutTimer({ exercises: result, onSessionComplete: handleComplete, onExerciseComplete: recordExerciseDone });
 
   // Reset the timer whenever the generated set changes (generate / new picks).
   useEffect(() => {

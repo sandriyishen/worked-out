@@ -53,8 +53,9 @@ src/
                             #   planSignature(); generateQuickSession() (#5 core)
     ranking.ts              # Pure exercise ranking score (#38 Phase B): efficacy + ease +
                             #   popularity + focus-match (+ additive favorite boost, #2), tunable
-                            #   weights; exerciseCompletionCounts() (#27, per-exercise tallies from
-                            #   SessionRun.exerciseIds) + exercisePopularity() (normalised from it)
+                            #   weights; exerciseCompletionCounts() (#27/#53, per-exercise tallies
+                            #   from DayRecord.exerciseRuns, legacy fallback to SessionRun.exerciseIds)
+                            #   + exercisePopularity() (normalised from it)
     exerciseLibrary.ts      # EXERCISE_LIBRARY = de-duped(BUILT_IN_EXERCISES +
                             #   STANDALONE_EXERCISES) — single source of truth; owns PREP_SECS;
                             #   getExerciseById(); query helpers; CATEGORY_LABELS / CATEGORY_GROUPS
@@ -65,10 +66,12 @@ src/
 
   hooks/
     useWorkoutTimer.ts      # Phase machine: idle → prep → active → done
-                            #   Handles bilateral switch cues, pause, reset
+                            #   Handles bilateral switch cues, pause, reset; onExerciseComplete()
+                            #   fires as each exercise's timer finishes (#53)
     useWorkoutHistory.ts    # Calendar state, completion tracking, day-off + weekly skip-day
                             #   logic; settings incl. equipment (#28) + focusAreas (#38) +
-                            #   pinned/favorite exercise ids (#2); togglePin() / toggleFavorite()
+                            #   pinned/favorite exercise ids (#2); togglePin() / toggleFavorite();
+                            #   recordExerciseDone() logs per-exercise completions (#53)
     useSessionPlan.ts       # Owns the persisted generated plan (#38 Phase C): rehydrate,
                             #   regenerate on profile-signature change (incl. pins/favorites, #2),
                             #   shuffle()
@@ -128,6 +131,8 @@ interface DayRecord {
   status: 'completed' | 'partial' | 'dayoff' | 'missed';
   completedSessionIds: number[];
   sessionRuns: SessionRun[];        // each completion (#3); SessionRun carries exerciseIds (#38)
+  exerciseRuns?: { id: string; at: number }[]; // per-exercise completions, recorded as each
+                                    //   exercise finishes regardless of session completion (#53)
 }
 
 interface AppSettings {
@@ -146,8 +151,11 @@ interface PlannedSession { name: string; emoji: string; focus: string; color: st
 interface SessionPlan { signature: string; seed: number; sessions: PlannedSession[]; }
 ```
 
-`SessionRun` records each completion with a timestamp **and the `exerciseIds` actually run** (#38), so
-popularity (#38) and the per-exercise counter (#27) derive exactly from history.
+`SessionRun` records each completion with a timestamp **and the `exerciseIds` actually run** (#38).
+Per-exercise counts/popularity (#27/#38) derive from `DayRecord.exerciseRuns` — the **per-exercise
+log** written the moment each exercise finishes, even in an abandoned session (#53). Days predating
+#53 have no `exerciseRuns`, so the derivation falls back to that day's `SessionRun.exerciseIds`
+(per-day, so a completed session is never double-counted). See `exerciseCompletionCounts` in `ranking.ts`.
 
 The session plan is **generated, not curated** (#38 Phase C): `sessionGenerator.generateDayPlan()` selects
 from the ranked library and `useSessionPlan` persists the result, regenerating only when the profile
@@ -227,8 +235,9 @@ exercises**, which fits the generated-plan model cleanly. This merges #33.
 - Each card carries the shared `ExerciseToggles` (★ favorite + 📌 pin) and badges, plus a
   "Favorites only" filter (#2); the screen consumes the shared `WorkoutHistoryContext`.
 - Each card shows an all-time **"✓ N× done"** counter (#27) derived from history via
-  `exerciseCompletionCounts(calData)` (counts `SessionRun.exerciseIds`); updates live as
-  sessions containing the exercise are completed.
+  `exerciseCompletionCounts(calData)`; counts come from `DayRecord.exerciseRuns` (#53), so an
+  exercise tallies the moment it finishes — even if the session was never completed — and updates
+  live.
 
 ### Catalogue & safety groundwork — 🚧 In progress (Phase 1: #26 / #31 / #29)
 - **#31 (shipped in this branch):** `Exercise.contraindications?: string` — optional
